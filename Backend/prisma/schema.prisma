@@ -18,18 +18,31 @@ datasource db {
 // firstName , lastName , email , password , Role , only college id will be accepted , Department , Indtitute 
 // Email Id Format : 22ce069@charusat.edu.in , For Faculty : ronalrpatel.ce@charusat.ac.in
 model User {
-  id         Int    @id @default(autoincrement())
-  email      String @unique
-  firstName  String
-  lastName   String
-  password   String
-  role       String
-  collegeId  String @unique
-  institute  String
-  department String
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  firstName     String
+  lastName      String
+  password      String
+  role          String
+  collegeId     String   @unique
+  institute     String
+  department    String
+  domain        String // Optional field for the user's domain of expertise
+  skills        String[] // Array of skills
+  aboutMe       String?  // Brief about the user
+  experience    String[] // Array of internship or job experiences
+  achievements  String[] // Array of achievements
+  projects      String[] // Array of project titles or descriptions
+  socialLinks   String[] // Array of social media/profile links
+  projectLinks  String[] // Array of project links
+  certificates  String[] // Array of certificate links or titles
+  currCgpa      Float?   // Current CGPA
+  phoneNumber   String?  // Contact information (e.g., phone number)
+  profilePhoto  String?  // URL to profile photo
 
   @@map("users") // Maps the model to the "users" table
 }
+
 
 // Signin
 // email id (Charusat) , password
