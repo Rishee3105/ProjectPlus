@@ -1,7 +1,9 @@
 const { PrismaClient } = require("@prisma/client");
 const express = require("express");
-const app = express();
 require("dotenv").config();
+const userRoute=require("./routes/user.js");
+
+const app = express();
 const prisma = new PrismaClient();
 
 const PORT = process.env.PORT || 3000;
@@ -22,6 +24,7 @@ async function connect()
 }
 connect();
 
+app.use("/user",userRoute);
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
