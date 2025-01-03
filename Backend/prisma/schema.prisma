@@ -13,8 +13,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Register
+// Input:
+// firstName , lastName , email , password , Role , only college id will be accepted , Department , Indtitute 
+// Email Id Format : 22ce069@charusat.edu.in , For Faculty : ronalrpatel.ce@charusat.ac.in
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id         Int    @id @default(autoincrement())
+  email      String @unique
+  firstName  String
+  lastName   String
+  password   String
+  role       String
+  collegeId  String @unique
+  institute  String
+  department String
+
+  @@map("users") // Maps the model to the "users" table
 }
+
+// Signin
+// email id (Charusat) , password
+
+// User Profile
+// Domain , skills , About Me , Experience (Internship) , Achievements , Projects , Social Links , Projects Links , Certificates , Curr CGPA , Contact Info , Profile Photo 
