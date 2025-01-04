@@ -1,6 +1,5 @@
+export const registerUser = async (req, res) => {
+  
+  res.send("User registered successfully!");
+};
 
-const registerUser=async (req,res)=>{
-
-}
-
-export {registerUser};
