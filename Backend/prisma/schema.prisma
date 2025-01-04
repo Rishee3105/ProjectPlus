@@ -15,7 +15,7 @@ datasource db {
 
 // Register
 // Input:
-// firstName , lastName , email , password , Role , only college id will be accepted , Department , Indtitute 
+// firstName , lastName , email , password , Role , only college id will be accepted , Department , Institute 
 // Email Id Format : 22ce069@charusat.edu.in , For Faculty : ronalrpatel.ce@charusat.ac.in
 
 // Signin
