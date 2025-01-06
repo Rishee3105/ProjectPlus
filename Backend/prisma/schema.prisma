@@ -30,7 +30,7 @@ model User {
   lastName     String
   password     String
   role         UserRole
-  collegeId    String   @unique
+  charusatId   String   @unique
   institute    String
   department   String
   domain       String? // Domain of expertise
@@ -97,6 +97,3 @@ enum UserRole {
   STUDENT
   TEACHER
 }
-
-
-

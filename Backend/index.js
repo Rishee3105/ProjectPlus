@@ -19,15 +19,14 @@ async function connectDatabase() {
   }
 }
 
-async function connect()
-{
-   await connectDatabase();
+async function connect() {
+  await connectDatabase();
 }
 connect();
 
 app.use(express.json());
 
-app.use("/user",userRoute);
+app.use("/user", userRoute);
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
