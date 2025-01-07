@@ -1,10 +1,13 @@
 import zod from "zod";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-// Validating this schema using the zod input validation
+
 const registerSchema = zod.object({
   email: zod
     .string()
@@ -16,12 +19,10 @@ const registerSchema = zod.object({
   password: zod.string().min(8),
 });
 
-// function for creating JWT Token
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET);
 };
 
-// Route for the registration and for generating JWT token
 const registerUser = async (req, res) => {
   try {
     const {
@@ -62,26 +63,69 @@ const registerUser = async (req, res) => {
         department,
         institute,
       },
-      select: {
-        id: true,
+    });
+
+    // Send verification email
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    }); 
+
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Email Verification",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2>Email Verification</h2>
+          <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
+          <a href="http://localhost:3000/user/signin" style="text-decoration: none;">
+            <button style="
+              display: inline-block;
+              background-color: #4CAF50;
+              color: white;
+              padding: 10px 20px;
+              font-size: 16px;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+            ">
+              Verify Email
+            </button>
+          </a>
+          <p>If you didn't request this email, please ignore it.</p>
+        </div>
+      `,
     });
 
     const token = createToken(user.id);
-    return res.status(201).json({ token, message: "User created" });
+    return res.status(201).json({ token, message: "User created and email sent successfully" });
   } catch (error) {
-    console.log(error);
+    console.error("Error:", error.message);
+
+    // Handle email-specific errors gracefully
+    if (error.message.includes("Missing credentials for")) {
+      return res.status(500).json({ message: "Email credentials are missing or invalid" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// validating Schema using the ZOD input validation
+
+
+
 const signinSchema = zod.object({
   email: zod.string().email(),
   password: zod.string().min(8),
 });
 
-// Route for signing in into the website
 const signinUser = async (req, res) => {
   try {
     const { email, password } = req.body;
