@@ -19,6 +19,7 @@ async function connectDatabase() {
   }
 }
 
+
 async function connect() {
   await connectDatabase();
 }

@@ -95,5 +95,5 @@ model Certificate {
 
 enum UserRole {
   STUDENT
-  TEACHER
+  FACULTY
 }

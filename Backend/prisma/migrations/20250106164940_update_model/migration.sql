@@ -1,14 +1,5 @@
-/*
-  Warnings:
-
-  - You are about to drop the `User` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('STUDENT', 'TEACHER');
-
--- DropTable
-DROP TABLE "User";
+CREATE TYPE "UserRole" AS ENUM ('STUDENT', 'FACULTY');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -18,7 +9,7 @@ CREATE TABLE "users" (
     "lastName" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "role" "UserRole" NOT NULL,
-    "collegeId" TEXT NOT NULL,
+    "charusatId" TEXT NOT NULL,
     "institute" TEXT NOT NULL,
     "department" TEXT NOT NULL,
     "domain" TEXT,
@@ -77,7 +68,7 @@ CREATE TABLE "Certificate" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_collegeId_key" ON "users"("collegeId");
+CREATE UNIQUE INDEX "users_charusatId_key" ON "users"("charusatId");
 
 -- CreateIndex
 CREATE INDEX "users_firstName_lastName_idx" ON "users"("firstName", "lastName");
