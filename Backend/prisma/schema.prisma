@@ -46,6 +46,7 @@ model User {
   certificates Certificate[] // Certificates linked to the user
 
   // Embedded data for simple lists
+  currWorkingProjects   String[]
   achievements String[] // Array of achievements
   socialLinks  String[] // Array of social media links
 
