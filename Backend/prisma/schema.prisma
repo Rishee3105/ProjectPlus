@@ -42,7 +42,7 @@ model User {
   // Relationships for complex data
   skills       UserSkill[] // Skills linked to the user
   experiences  Experience[] // Experiences linked to the user
-  projects     Project[] // Projects linked to the user
+  projects     UserProject[] // Projects linked to the user
   certificates Certificate[] // Certificates linked to the user
 
   // Embedded data for simple lists
@@ -74,7 +74,7 @@ model Experience {
   user User @relation(fields: [userId], references: [id])
 }
 
-model Project {
+model UserProject {
   id      Int     @id @default(autoincrement())
   userId  Int
   title   String
@@ -96,4 +96,59 @@ model Certificate {
 enum UserRole {
   STUDENT
   FACULTY
+}
+
+model Project {
+  id             Int            @id @default(autoincrement())
+  pname          String
+  pdescription   String
+  pdefinition    String
+  phost          String
+  teamSize       Int
+  members        Member[]
+  mentors        Mentor[]
+  pduration      Int // Duration in months
+  documentation  String[] // Links to documentation
+  requiredDomain String
+  techStack      String[]
+  rating         Float? // Optional rating
+  suggestions    Suggestion[] // Linked suggestions with time tracking
+  projectPrivacy ProjectPrivacy
+
+  @@index([pname, phost]) // Optimized for search by project name and host
+}
+
+model Member {
+  id         Int     @id @default(autoincrement())
+  charusatID String  @unique
+  role       String // 'student' or 'faculty'
+  projectId  Int
+  project    Project @relation(fields: [projectId], references: [id])
+
+  @@index([charusatID]) // Optimized for checking availability of members
+}
+
+model Mentor {
+  id         Int       @id @default(autoincrement())
+  charusatID String    @unique
+  name       String
+  projects   Project[] @relation
+
+  @@index([charusatID]) // Optimized for mentor lookups
+}
+
+model Suggestion {
+  id        Int      @id @default(autoincrement())
+  content   String // Suggestion text
+  createdAt DateTime @default(now()) // Timestamp for suggestion creation
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, createdAt]) // Optimized for retrieving suggestions by project and time
+}
+
+enum ProjectPrivacy {
+  PUBLIC_FOR_ALL
+  PUBLIC_FOR_CHARUSAT
+  PRIVATE
 }
