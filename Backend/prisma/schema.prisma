@@ -42,7 +42,7 @@ model User {
   // Relationships for complex data
   skills       UserSkill[] // Skills linked to the user
   experiences  Experience[] // Experiences linked to the user
-  projects     UserProject[] // Projects linked to the user
+  projects     UserProject[] // past Projects linked to the user
   certificates Certificate[] // Certificates linked to the user
 
   // Embedded data for simple lists
@@ -122,7 +122,7 @@ model Project {
 model Member {
   id         Int     @id @default(autoincrement())
   charusatId String  @unique
-  role       String // 'student' or 'faculty'
+  role       String // Role in the project
   projectId  Int
   project    Project @relation(fields: [projectId], references: [id])
 
@@ -133,7 +133,8 @@ model Mentor {
   id         Int       @id @default(autoincrement())
   charusatId String    @unique
   name       String
-  projects   Project[] @relation
+  projectId  Int
+  project    Project @relation(fields: [projectId], references: [id])
 
   @@index([charusatId]) // Optimized for mentor lookups
 }
