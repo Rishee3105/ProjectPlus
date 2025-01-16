@@ -121,21 +121,21 @@ model Project {
 
 model Member {
   id         Int     @id @default(autoincrement())
-  charusatID String  @unique
+  charusatId String  @unique
   role       String // 'student' or 'faculty'
   projectId  Int
   project    Project @relation(fields: [projectId], references: [id])
 
-  @@index([charusatID]) // Optimized for checking availability of members
+  @@index([charusatId]) // Optimized for checking availability of members
 }
 
 model Mentor {
   id         Int       @id @default(autoincrement())
-  charusatID String    @unique
+  charusatId String    @unique
   name       String
   projects   Project[] @relation
 
-  @@index([charusatID]) // Optimized for mentor lookups
+  @@index([charusatId]) // Optimized for mentor lookups
 }
 
 model Suggestion {
