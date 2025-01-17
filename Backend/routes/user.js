@@ -4,7 +4,7 @@ const userRoute = express.Router();
 
 userRoute.post("/register", registerUser);
 userRoute.post("/signin", signinUser);
-userRoute.get("/signin", (req,res)=>{
+userRoute.get("/signin", (req, res) => {
   res.send("Hello");
 });
 

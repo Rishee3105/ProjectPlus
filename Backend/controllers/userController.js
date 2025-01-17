@@ -7,7 +7,6 @@ dotenv.config();
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-
 const registerSchema = zod.object({
   email: zod
     .string()
@@ -75,7 +74,7 @@ const registerUser = async (req, res) => {
       tls: {
         rejectUnauthorized: false,
       },
-    }); 
+    });
 
     await transporter.sendMail({
       from: process.env.EMAIL,
@@ -105,21 +104,22 @@ const registerUser = async (req, res) => {
     });
 
     const token = createToken(user.id);
-    return res.status(201).json({ token, message: "User created and email sent successfully" });
+    return res
+      .status(201)
+      .json({ token, message: "User created and email sent successfully" });
   } catch (error) {
     console.error("Error:", error.message);
 
     // Handle email-specific errors gracefully
     if (error.message.includes("Missing credentials for")) {
-      return res.status(500).json({ message: "Email credentials are missing or invalid" });
+      return res
+        .status(500)
+        .json({ message: "Email credentials are missing or invalid" });
     }
 
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-
-
 
 const signinSchema = zod.object({
   email: zod.string().email(),

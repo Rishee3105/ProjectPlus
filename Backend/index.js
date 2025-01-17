@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import userRoute from "./routes/user.js";
 import projectRoute from "./routes/project.js";
+import profileRoute from "./routes/profile.js";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -20,17 +21,17 @@ async function connectDatabase() {
   }
 }
 
-
 async function connect() {
   await connectDatabase();
 }
 connect();
 
-app.use("/uploads",express.static('uploads'))
+app.use("/uploads", express.static("uploads"));
 app.use(express.json());
 
 app.use("/user", userRoute);
 app.use("/project", projectRoute);
+app.use("/profile", profileRoute);
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
