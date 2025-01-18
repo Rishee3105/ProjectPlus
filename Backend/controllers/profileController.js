@@ -4,81 +4,6 @@ import path from "path";
 
 const prisma = new PrismaClient();
 
-const createProfile = async (req, res) => {
-  try {
-    const {
-      domain,
-      aboutMe,
-      currCgpa,
-      phoneNumber,
-      skills,
-      achievements,
-      socialLinks,
-      currWorkingProjects,
-      experiences,
-      projects,
-    } = req.body;
-
-    const userId = req.body.userId;
-
-    const profile = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        domain,
-        aboutMe,
-        currCgpa,
-        phoneNumber,
-        achievements,
-        socialLinks,
-        currWorkingProjects,
-      },
-    });
-
-    // Insert skills into UserSkill table
-    if (skills && skills.length > 0) {
-      await prisma.userSkill.createMany({
-        data: skills.map((skill) => ({
-          userId,
-          skill,
-        })),
-        skipDuplicates: true, // Avoids duplicate skill entries
-      });
-    }
-
-    // Insert experiences into Experience table
-    if (experiences && experiences.length > 0) {
-      await prisma.experience.createMany({
-        data: experiences.map((exp) => ({
-          userId,
-          title: exp.title,
-          company: exp.company,
-          duration: exp.duration,
-        })),
-      });
-    }
-
-    // Insert projects into UserProject table
-    if (projects && projects.length > 0) {
-      await prisma.userProject.createMany({
-        data: projects.map((proj) => ({
-          userId,
-          title: proj.title,
-          link: proj.link || null,
-          details: proj.details || null,
-        })),
-      });
-    }
-
-    res.status(200).json({ message: "Profile created successfully", profile });
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ error: "Error creating profile", details: error.message });
-  }
-};
-
-// Whenever the frontend use this route , at that time you have to first get the default values from the DB and then do updation in that data
 const updateProfile = async (req, res) => {
   try {
     const {
@@ -89,17 +14,25 @@ const updateProfile = async (req, res) => {
       skills,
       achievements,
       socialLinks,
-      currWorkingProjects,
       experiences,
       projects,
+      certificates,
     } = req.body;
 
     const userId = req.body.userId;
 
-    // Start a transaction to ensure atomicity
-    await prisma.$transaction(async (prisma) => {
-      // Update basic user profile
-      const updatedProfile = await prisma.user.update({
+    // Fetch the existing profile to ensure it exists before updating
+    const existingProfile = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingProfile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    // Update the profile using a transaction to ensure atomicity
+    const updatedProfile = await prisma.$transaction(async (prisma) => {
+      const profile = await prisma.user.update({
         where: { id: userId },
         data: {
           domain,
@@ -108,23 +41,22 @@ const updateProfile = async (req, res) => {
           phoneNumber,
           achievements,
           socialLinks,
-          currWorkingProjects,
         },
       });
 
-      // Rewrite UserSkill table
-      await prisma.userSkill.deleteMany({ where: { userId } }); // Clear existing skills
+      // Rewrite associated data
+      // Delete existing skills for the user
+      await prisma.userSkill.deleteMany({ where: { userId } });
       if (skills && skills.length > 0) {
         await prisma.userSkill.createMany({
           data: skills.map((skill) => ({
             userId,
-            skill,
+            skill, 
           })),
         });
       }
 
-      // Rewrite Experience table
-      await prisma.experience.deleteMany({ where: { userId } }); // Clear existing experiences
+      await prisma.experience.deleteMany({ where: { userId } });
       if (experiences && experiences.length > 0) {
         await prisma.experience.createMany({
           data: experiences.map((exp) => ({
@@ -132,12 +64,12 @@ const updateProfile = async (req, res) => {
             title: exp.title,
             company: exp.company,
             duration: exp.duration,
+            description: exp.description || null,
           })),
         });
       }
 
-      // Rewrite UserProject table
-      await prisma.userProject.deleteMany({ where: { userId } }); // Clear existing projects
+      await prisma.userProject.deleteMany({ where: { userId } });
       if (projects && projects.length > 0) {
         await prisma.userProject.createMany({
           data: projects.map((proj) => ({
@@ -149,177 +81,116 @@ const updateProfile = async (req, res) => {
         });
       }
 
-      res
-        .status(200)
-        .json({ message: "Profile updated successfully", updatedProfile });
+
+      // Handle certificates addition
+      // if (certificates && certificates.length > 0) {
+      //   const charusatId = existingProfile.charusatId;
+      //   const certificateFiles = certificates.map((file) => ({
+      //     title: file.originalname,
+      //     url: `../uploads/certificates/${charusatId}_${file.originalname}`,
+      //     userId: userId,
+      //   }));
+
+      //   await prisma.certificate.createMany({
+      //     data: certificateFiles,
+      //   });
+      // }
+
+      if (certificates && certificates.length > 0) {
+        const charusatId = existingProfile.charusatId;  
+        const certificateFiles = certificates.map((file) => {
+          const title = file.title;  
+          const url = file.url;      
+      
+          console.log('Processing certificate:', { title, url });
+          return {
+            title, 
+            url,   
+            userId: userId,  
+          };
+        });
+      
+        if (certificateFiles.length > 0) {
+          await prisma.certificate.createMany({
+            data: certificateFiles,
+          });
+        } else {
+          console.log('No valid certificates to insert.');
+        }
+      } else {
+        console.log('No certificates provided.');
+      }      
+
+      return profile;
     });
+
+    return res
+      .status(200)
+      .json({ message: "Profile updated successfully", updatedProfile });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ error: "Error updating profile", details: error.message });
+    res.status(500).json({
+      error: "Error updating profile",
+      details: error.message,
+    });
   }
 };
 
-// Add Profile Image function
-const addProfileImage = async (req, res) => {
-  try {
-    const userId = req.body.userId; // Get userId from middleware
-    const user = await prisma.user.findUnique({ where: { id: userId } });
 
-    if (!user || !user.charusatId) {
-      return res
-        .status(404)
-        .json({ message: "CharusatId not found for the given userId" });
-    }
+const updateProfileImage_avtr = async (req, res) => {
+  const { profileImage } = req.file; 
+  const userId=req.body.userId;
 
-    const charusatId = user.charusatId;
-    const profileImagePath = `../uploads/profileImages/${charusatId}_profileImage${path.extname(
-      req.file.originalname
-    )}`;
+  if (profileImage) {
+    try {
+      const user=await prisma.user.findUnique({
+        id:userId
+      })
 
-    // Update user record in database
-    await prisma.user.update({
-      where: { id: userId },
-      data: { profilePhoto: profileImagePath },
-    });
-
-    res.status(200).json({
-      message: "Profile image uploaded successfully!",
-      path: profileImagePath,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error uploading profile image.", error: err.message });
-  }
-};
-
-// Add Certificates function
-const addCertificates = async (req, res) => {
-  try {
-    const userId = req.body.userId; // Get userId from middleware
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-
-    if (!user || !user.charusatId) {
-      return res
-        .status(404)
-        .json({ message: "CharusatId not found for the given userId" });
-    }
-
-    const charusatId = user.charusatId;
-    const certificateFiles = req.files.map((file) => ({
-      title: file.originalname,
-      url: `../uploads/certificates/${charusatId}_${file.originalname}`,
-      userId: userId,
-    }));
-
-    // Save certificate details in database
-    await prisma.certificate.createMany({
-      data: certificateFiles,
-    });
-
-    res.status(200).json({
-      message: "Certificates uploaded successfully!",
-      certificates: certificateFiles,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error uploading certificates.", error: err.message });
-  }
-};
-
-const updateProfileImage = async (req, res) => {
-  try {
-    const userId = req.body.userId; // Get userId from middleware
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-
-    if (!user || !user.charusatId) {
-      return res
-        .status(404)
-        .json({ message: "CharusatId not found for the given userId" });
-    }
-
-    const charusatId = user.charusatId;
-    const newProfileImagePath = `../uploads/profileImages/${charusatId}_profileImage${path.extname(
-      req.file.originalname
-    )}`;
-
-    // Remove old profile image file if it exists
-    if (user.profilePhoto) {
-      const oldFilePath = path.join(__dirname, `..${user.profilePhoto}`);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath); // Delete the old file
+      if(!user || !user.charusatId){
+        return res.status(404).json({ message: "CharusatId not found for the given userId" });
       }
-    }
 
-    // Update database with new profile image path
-    await prisma.user.update({
-      where: { id: userId },
-      data: { profilePhoto: newProfileImagePath },
-    });
+      const charusatId = user.charusatId;
 
-    res.status(200).json({
-      message: "Profile image updated successfully!",
-      path: newProfileImagePath,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error updating profile image.", error: err.message });
-  }
-};
+      const newProfileImagePath = `uploads/profileImages/${charusatId}_profileImage${path.extname(profileImage.originalname)}`;
 
-// Function to delete a certificate
-const deleteCertificate = async (req, res) => {
-  try {
-    const userId = req.body.userId; // Get userId from auth middleware
-    const { certificateId } = req.body; // Get certificateId from request body
+      // Check and remove the old profile image file
+      if (req.user.profilePhoto) {
+        const oldFilePath = path.join(__dirname, `..${req.user.profilePhoto}`);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath); // Delete the old file
+        }
+      }
 
-    // Fetch the certificate record by id
-    const certificate = await prisma.certificate.findUnique({
-      where: { id: certificateId },
-    });
+      // Update the profile photo in the database
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { profilePhoto: newProfileImagePath },
+      });
 
-    // Check if the certificate exists
-    if (!certificate) {
-      return res.status(404).json({ message: "Certificate not found" });
-    }
-
-    // Check if the certificate belongs to the logged-in user
-    if (certificate.userId !== userId) {
-      return res.status(403).json({
-        message: "You do not have permission to delete this certificate",
+      return res.status(200).json({
+        message: "Profile image updated successfully.",
+        profilePhoto: newProfileImagePath, 
+      });
+    } catch (err) {
+      return res.status(500).json({
+        message: "Error updating profile image",
+        error: err.message,
       });
     }
-
-    // Delete the certificate file from the server, if it exists
-    if (certificate.url) {
-      const filePath = path.join(__dirname, `..${certificate.url}`);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath); // Delete the file
-      }
-    }
-
-    // Delete the certificate record from the database
-    await prisma.certificate.delete({
-      where: { id: certificateId },
+  } else {
+    return res.status(400).json({
+      message: "No image file provided.",
     });
-
-    res.status(200).json({ message: "Certificate deleted successfully!" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error deleting certificate.", error: err.message });
   }
 };
+
 
 const getProfile = async (req, res) => {
   try {
-    const userId = req.body.userId; // Extract userId from auth middleware
+    const userId = req.body.userId; 
 
-    // Fetch all user data including relationships and embedded fields
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -376,7 +247,6 @@ const getProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Send the full user profile data to the frontend
     res.status(200).json({ user });
   } catch (err) {
     console.error("Error fetching profile data:", err);
@@ -386,12 +256,4 @@ const getProfile = async (req, res) => {
   }
 };
 
-export {
-  createProfile,
-  updateProfile,
-  addProfileImage,
-  addCertificates,
-  updateProfileImage,
-  deleteCertificate,
-  getProfile,
-};
+export { updateProfile, getProfile,updateProfileImage_avtr };

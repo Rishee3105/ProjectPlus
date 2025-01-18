@@ -61,6 +61,7 @@ const registerUser = async (req, res) => {
         charusatId,
         department,
         institute,
+        profilePhoto: "uploads/profileImages/default_avtar.jpg",
       },
     });
 
