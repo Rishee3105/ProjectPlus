@@ -149,6 +149,7 @@ model Member {
   project    Project @relation(fields: [projectId], references: [id])
 
   @@index([charusatId]) // Optimized for checking availability of members
+  @@unique([charusatId, projectId]) // Ensure user can only join a project once
 }
 
 model Mentor {

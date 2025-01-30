@@ -176,4 +176,93 @@ const sendRequest = async (req, res) => {
   }
 };
 
-export { createProject, addMentor, sendRequest };
+
+const requestResult=async (req,res)=>{
+  try {
+    const { requestId, status } = req.body;
+
+    if (!requestId || !status) {
+      return res.status(400).json({ message: "Missing requestId or status" });
+    }
+
+    if (!["APPROVED", "REJECTED"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const request = await prisma.prequest.findUnique({
+      where: { id: requestId },
+      include: {
+        user: true, // Get user details
+        project: true, // Get project details
+      },
+    });
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    
+    if (status === "APPROVED") {
+      await prisma.member.create({
+        data: {
+          charusatId: request.user.charusatId,
+          role: "STUDENT", 
+          projectId: request.project.id,
+        },
+      });
+    }
+
+    await prisma.prequest.update({
+      where: { id: requestId },
+      data: { status },
+    });
+
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+
+    let emailSubject = "";
+    let emailHtml = "";
+
+    if (status === "APPROVED") {
+      emailSubject = "Your Project Request was Approved 🎉";
+      emailHtml = `
+        <p>Hi ${request.user.firstName},</p>
+        <p>Your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:green;">approved</strong> by the host.</p>
+        <p>Welcome to the team! 🚀</p>
+        <p>Best regards,<br>Project Management Team</p>
+      `;
+    } else {
+      emailSubject = "Your Project Request was Rejected ❌";
+      emailHtml = `
+        <p>Hi ${request.user.firstName},</p>
+        <p>Unfortunately, your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:red;">rejected</strong> by the host.</p>
+        <p>We encourage you to explore other projects that match your skills.</p>
+        <p>Best regards,<br>Project Management Team</p>
+      `;
+    }
+
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: request.user.email,
+      subject: emailSubject,
+      html: emailHtml,
+    });
+
+
+    return res.status(200).json({ message: `Request ${status.toLowerCase()} successfully` });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export { createProject, addMentor, sendRequest, requestResult};
