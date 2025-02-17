@@ -6,6 +6,11 @@ const createProject = async (req, res) => {
   try {
     const userData = await prisma.user.findUnique({
       where: { id: req.body.userId },
+      select: {
+        charusatId: true,
+        role: true,
+        id: true,
+      },
     });
 
     if (!userData) {
@@ -16,7 +21,6 @@ const createProject = async (req, res) => {
       pname,
       pdescription,
       pdefinition,
-      phost,
       teamSize,
       pduration,
       projectPrivacy,
@@ -29,7 +33,7 @@ const createProject = async (req, res) => {
         pname,
         pdescription,
         pdefinition,
-        phost,
+        phost: userData.charusatId,
         teamSize,
         pduration,
         projectPrivacy,
@@ -66,13 +70,17 @@ const createProject = async (req, res) => {
   }
 };
 
-
 const addMentor = async (req, res) => {
   try {
-    const { charusatId, name } = req.body;
+    const { charusatId, name, emailId } = req.body;
 
     const userData = await prisma.user.findUnique({
       where: { id: req.body.userId },
+      select: {
+        charusatId: true,
+        role: true,
+        id: true,
+      },
     });
 
     if (!userData) {
@@ -94,6 +102,7 @@ const addMentor = async (req, res) => {
           create: {
             charusatId,
             name,
+            emailId,
           },
         },
       },
@@ -105,7 +114,6 @@ const addMentor = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 const sendRequest = async (req, res) => {
   try {
@@ -176,8 +184,7 @@ const sendRequest = async (req, res) => {
   }
 };
 
-
-const requestResult=async (req,res)=>{
+const requestResult = async (req, res) => {
   try {
     const { requestId, status } = req.body;
 
@@ -201,12 +208,11 @@ const requestResult=async (req,res)=>{
       return res.status(404).json({ message: "Request not found" });
     }
 
-    
     if (status === "APPROVED") {
       await prisma.member.create({
         data: {
           charusatId: request.user.charusatId,
-          role: "STUDENT", 
+          role: "STUDENT",
           projectId: request.project.id,
         },
       });
@@ -256,13 +262,15 @@ const requestResult=async (req,res)=>{
       html: emailHtml,
     });
 
-
-    return res.status(200).json({ message: `Request ${status.toLowerCase()} successfully` });
-
+    return res
+      .status(200)
+      .json({ message: `Request ${status.toLowerCase()} successfully` });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
-export { createProject, addMentor, sendRequest, requestResult};
+const updateProject = async (req, res) => {};
+
+export { createProject, addMentor, sendRequest, requestResult, updateProject };

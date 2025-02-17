@@ -148,14 +148,16 @@ model Member {
   projectId  Int
   project    Project @relation(fields: [projectId], references: [id])
 
-  @@index([charusatId]) // Optimized for checking availability of members
   @@unique([charusatId, projectId]) // Ensure user can only join a project once
+  @@index([charusatId]) // Optimized for checking availability of members
 }
 
+// Add email-Id in this mentor table
 model Mentor {
   id         Int     @id @default(autoincrement())
   charusatId String  @unique
   name       String
+  emailId    String  @unique
   projectId  Int
   project    Project @relation(fields: [projectId], references: [id])
 
