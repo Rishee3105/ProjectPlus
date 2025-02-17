@@ -52,6 +52,8 @@ model User {
 
   // Relation to prequest
   prequests prequest[]
+  resetCode String?
+  resetCodeExpires DateTime?
 
   @@index([firstName, lastName]) // Index for name-based searches
   @@index([email, domain, role]) // Index for frequently filtered fields

@@ -2,6 +2,7 @@ import zod from "zod";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 import dotenv from "dotenv";
 dotenv.config();
 import { PrismaClient } from "@prisma/client";
@@ -167,4 +168,110 @@ const signinUser = async (req, res) => {
   }
 };
 
-export { registerUser, signinUser };
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const userData = await prisma.user.findUnique({
+      where: { email: email },
+    });
+
+    if (!userData) {
+      return res.json({ success: false, message: "User not exists" });
+    }
+
+    const uniqueCode = crypto.randomBytes(3).toString("hex");
+    const expirationTime = new Date(Date.now() + 60000); //Code expires in 1 min
+
+    await prisma.user.update({
+      where: { email: email },
+      data: {
+        resetCode: uniqueCode,
+        resetCodeExpires: expirationTime,
+      },
+    });
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "bakenest9@gmail.com", // Your email
+        pass: "aghm pbse asnm gbwv", // Your email password or app password
+      },
+    });
+
+    const mailOptions = {
+      from: "bakenest9@gmail.com",
+      to: email,
+      subject: "Reset Your Password - Action Required",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #333;">Password Reset Request</h2>
+          <p>Hello,</p>
+          <p>We received a request to reset your password. Please use the code below to proceed with resetting your password:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <span style="font-size: 22px; font-weight: bold; padding: 10px 20px; background-color: #f4f4f4; border-radius: 5px; display: inline-block;">
+              ${uniqueCode}
+            </span>
+          </div>
+          <p>This code is valid for <strong>1 min</strong>. If you didn’t request a password reset, please ignore this email.</p>
+          <p>For security reasons, do not share this code with anyone.</p>
+        </div>
+      `,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return console.log(error);
+      }
+      return res.json({
+        success: true,
+        message: "Password reset code sent to email.",
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json({ success: false, message: "Error resetting password." });
+  }
+};
+
+const verifyCodeAndResetPassword = async (req, res) => {
+  const { email, code, password, confirmPassword } = req.body;
+
+  try {
+    const userData = await prisma.user.findUnique({ where: { email: email } });
+
+    if (!userData) {
+      return res.json({ success: false, message: "User does not exist" });
+    }
+
+    let targetUser = userData;
+
+    if (targetUser.resetCode !== code || new Date() > new Date(targetUser.resetCodeExpires)) {
+      return res.json({ success: false, message: "Invalid or expired code." });
+    }
+
+    if (password !== confirmPassword) {
+      return res.json({ success: false, message: "Passwords do not match." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await prisma.user.update({
+      where: { email: email },
+      data: {
+        password: hashedPassword,
+        resetCode: null,
+        resetCodeExpires: null,
+      },
+    });
+
+    return res.json({ success: true, message: "Password reset successful." });
+  } catch (error) {
+    console.error(error);
+    return res.json({ success: false, message: "Error resetting password." });
+  }
+};
+
+
+export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword };
