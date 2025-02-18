@@ -271,6 +271,72 @@ const requestResult = async (req, res) => {
   }
 };
 
-const updateProject = async (req, res) => {};
+const updateProject = async (req, res) => {
+  try {
+    const userData = await prisma.user.findUnique({
+      where: { id: req.body.userId },
+      select: {
+        charusatId: true,
+        role: true,
+        id: true,
+      },
+    });
+
+    if (!userData) {
+      return res.status(404).json({ msg: "User Not Found" });
+    }
+
+    const {
+      pname,
+      pdescription,
+      pdefinition,
+      teamSize,
+      pduration,
+      projectPrivacy,
+      requiredDomain,
+      techStack,
+      projectId,
+    } = req.body;
+
+    const projectExist = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        phost: true,
+      },
+    });
+
+    if (!projectExist) {
+      return req.status(404).json({
+        msg: "Project Doesn not Exist",
+      });
+    }
+
+    if (userData.charusatId !== projectExist.phost) {
+      return req.status(403).json({
+        msg: "Only the project host can update this project",
+      });
+    }
+
+    const updateProject = await prisma.project.update({
+      data: {
+        pname,
+        pdescription,
+        pdefinition,
+        teamSize,
+        pduration,
+        projectPrivacy,
+        requiredDomain,
+        techStack,
+      },
+    });
+
+    return res.status(200).json({
+      msg: "Project updated successfully",
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 export { createProject, addMentor, sendRequest, requestResult, updateProject };
