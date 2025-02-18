@@ -51,8 +51,8 @@ model User {
   socialLinks         String[] // Array of social media links
 
   // Relation to prequest
-  prequests prequest[]
-  resetCode String?
+  prequests        prequest[]
+  resetCode        String?
   resetCodeExpires DateTime?
 
   @@index([firstName, lastName]) // Index for name-based searches
