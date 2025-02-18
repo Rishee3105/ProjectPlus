@@ -186,7 +186,7 @@ const addCertificates = async (req, res) => {
 const deleteCertificate = async (req, res) => {
   try {
     const userId = req.body.userId;
-    const { certificateId } = req.body;
+    const { certificateId } = req.body.certificateId;
 
     const certificate = await prisma.certificate.findUnique({
       where: { id: certificateId },

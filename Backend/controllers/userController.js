@@ -62,7 +62,7 @@ const registerUser = async (req, res) => {
         charusatId,
         department,
         institute,
-        profilePhoto: "uploads/profileImages/default_avtar.jpg",
+        profilePhoto: "../uploads/profileImages/default_avtar.jpg",
       },
     });
 
@@ -246,7 +246,10 @@ const verifyCodeAndResetPassword = async (req, res) => {
 
     let targetUser = userData;
 
-    if (targetUser.resetCode !== code || new Date() > new Date(targetUser.resetCodeExpires)) {
+    if (
+      targetUser.resetCode !== code ||
+      new Date() > new Date(targetUser.resetCodeExpires)
+    ) {
       return res.json({ success: false, message: "Invalid or expired code." });
     }
 
@@ -272,6 +275,5 @@ const verifyCodeAndResetPassword = async (req, res) => {
     return res.json({ success: false, message: "Error resetting password." });
   }
 };
-
 
 export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword };

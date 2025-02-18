@@ -36,7 +36,7 @@ const certificateStorage = multer.diskStorage({
       }
 
       const charusatId = user.charusatId;
-      cb(null, `${charusatId}_certificate_${file.originalname}`);
+      cb(null, `${charusatId}_${file.originalname}`);
     } catch (error) {
       cb(error, null);
     }

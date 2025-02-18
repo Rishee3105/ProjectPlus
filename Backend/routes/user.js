@@ -1,5 +1,10 @@
 import express from "express";
-import { signinUser, registerUser, forgotPassword, verifyCodeAndResetPassword} from "../controllers/userController.js";
+import {
+  signinUser,
+  registerUser,
+  forgotPassword,
+  verifyCodeAndResetPassword,
+} from "../controllers/userController.js";
 const userRoute = express.Router();
 
 userRoute.post("/register", registerUser);
