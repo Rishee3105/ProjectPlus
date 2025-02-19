@@ -39,7 +39,9 @@ const createProject = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const newFilename = `${pname}_${charusatId}_${Date.now()}${path.extname(file.originalname)}`;
+        const newFilename = `${pname}_${charusatId}_${Date.now()}${path.extname(
+          file.originalname
+        )}`;
         const oldPath = file.path;
         const newPath = path.join("uploads/projectDocumentation", newFilename);
 
@@ -55,8 +57,8 @@ const createProject = async (req, res) => {
         pdescription,
         pdefinition,
         phost: charusatId,
-        teamSize:teamSize-'0',
-        pduration:pduration-'0',
+        teamSize: teamSize - "0",
+        pduration: pduration - "0",
         projectPrivacy,
         requiredDomain,
         techStack,
@@ -79,7 +81,9 @@ const createProject = async (req, res) => {
       },
     });
 
-    return res.status(200).json({ message: "Project created successfully", project: newProject });
+    return res
+      .status(200)
+      .json({ message: "Project created successfully", project: newProject });
   } catch (error) {
     console.error("Error creating project:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -134,7 +138,7 @@ const addMentor = async (req, res) => {
 const sendRequest = async (req, res) => {
   try {
     const { projectId } = req.body;
-    const userId=req.userId;
+    const userId = req.userId;
 
     if (!userId || !projectId) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -216,8 +220,8 @@ const requestResult = async (req, res) => {
     const request = await prisma.prequest.findUnique({
       where: { id: requestId },
       include: {
-        user: true, 
-        project: true, 
+        user: true,
+        project: true,
       },
     });
 

@@ -17,7 +17,6 @@ const updateProfile = async (req, res) => {
       socialLinks,
       experiences,
       projects,
-      certificates,
     } = req.body;
 
     const userId = req.userId;
@@ -80,45 +79,6 @@ const updateProfile = async (req, res) => {
           })),
         });
       }
-
-      // Handle certificates addition
-      // if (certificates && certificates.length > 0) {
-      //   const charusatId = existingProfile.charusatId;
-      //   const certificateFiles = certificates.map((file) => ({
-      //     title: file.originalname,
-      //     url: `../uploads/certificates/${charusatId}_${file.originalname}`,
-      //     userId: userId,
-      //   }));
-
-      //   await prisma.certificate.createMany({
-      //     data: certificateFiles,
-      //   });
-      // }
-
-      if (certificates && certificates.length > 0) {
-        const charusatId = existingProfile.charusatId;
-        const certificateFiles = certificates.map((file) => {
-          const title = file.title;
-          const url = file.url;
-
-          return {
-            title,
-            url,
-            userId: userId,
-          };
-        });
-
-        if (certificateFiles.length > 0) {
-          await prisma.certificate.createMany({
-            data: certificateFiles,
-          });
-        } else {
-          console.log("No valid certificates to insert.");
-        }
-      } else {
-        console.log("No certificates provided.");
-      }
-
       return profile;
     });
 
@@ -153,7 +113,7 @@ const updateProfileImage_avtr = async (req, res) => {
 
       const charusatId = user.charusatId;
 
-      const newProfileImagePath = `../uploads/profileImages/${charusatId}_profileImage${path.extname(
+      const newProfileImagePath = `uploads/profileImages/${charusatId}_profileImage${path.extname(
         profileImage.originalname
       )}`;
 
@@ -190,7 +150,7 @@ const updateProfileImage_avtr = async (req, res) => {
 // Route to add Certificated of a Particular User
 const addCertificates = async (req, res) => {
   try {
-    const userId = req.body.userId;
+    const userId = req.userId;
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.charusatId) {
       return res
@@ -200,7 +160,7 @@ const addCertificates = async (req, res) => {
     const charusatId = user.charusatId;
     const certificateFiles = req.files.map((file) => ({
       title: file.originalname,
-      url: `../uploads/certificates/${charusatId}_${file.originalname}`,
+      url: `uploads/certificates/${charusatId}_${file.originalname}`,
       userId: userId,
     }));
 
@@ -222,7 +182,7 @@ const addCertificates = async (req, res) => {
 // Function to delete a certificate
 const deleteCertificate = async (req, res) => {
   try {
-    const userId = req.body.userId;
+    const userId = req.userId;
     const { certificateId } = req.body.certificateId;
 
     const certificate = await prisma.certificate.findUnique({
