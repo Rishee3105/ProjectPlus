@@ -96,8 +96,8 @@ const updateProfile = async (req, res) => {
 
 // Route to update or upload the profile Image of a particular User
 const updateProfileImage_avtr = async (req, res) => {
-  const profileImage = req.file; 
-  const userId=req.userId;
+  const profileImage = req.file;
+  const userId = req.userId;
 
   if (profileImage) {
     try {
@@ -117,11 +117,10 @@ const updateProfileImage_avtr = async (req, res) => {
         profileImage.originalname
       )}`;
 
-      // Check and remove the old profile image file
       if (user.profilePhoto) {
         const oldFilePath = path.join(process.cwd(), user.profilePhoto);
         if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath); // Delete the old file
+          fs.unlinkSync(oldFilePath);
         }
       }
 

@@ -64,7 +64,7 @@ export const uploadProjectDocumentation = multer({
 
 const certificateStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads/certificates"));
+    cb(null,"uploads/certificates");
   },
   filename: async (req, file, cb) => {
     try {
@@ -86,7 +86,7 @@ const certificateStorage = multer.diskStorage({
   },
 });
 
-// export const uploadCertificates = multer({
-//   storage: certificateStorage,
-//   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB file size limit per file
-// }).array("certificates", 10);
+export const uploadCertificates = multer({
+  storage: certificateStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).array("certificates", 10);
