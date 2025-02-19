@@ -1,11 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 import nodemailer from "nodemailer";
+import path from "path";
+import fs from "fs";
 const prisma = new PrismaClient();
 
 const createProject = async (req, res) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized - No User ID" });
+    }
+
     const userData = await prisma.user.findUnique({
-      where: { id: req.body.userId },
+      where: { id: req.userId },
       select: {
         charusatId: true,
         role: true,
@@ -28,30 +34,44 @@ const createProject = async (req, res) => {
       techStack,
     } = req.body;
 
+    const charusatId = userData.charusatId;
+    const newFilenames = [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const newFilename = `${pname}_${charusatId}_${Date.now()}${path.extname(file.originalname)}`;
+        const oldPath = file.path;
+        const newPath = path.join("uploads/projectDocumentation", newFilename);
+
+        // Rename the file
+        fs.renameSync(oldPath, newPath);
+        newFilenames.push(newPath);
+      }
+    }
+
     const newProject = await prisma.project.create({
       data: {
         pname,
         pdescription,
         pdefinition,
-        phost: userData.charusatId,
-        teamSize,
-        pduration,
+        phost: charusatId,
+        teamSize:teamSize-'0',
+        pduration:pduration-'0',
         projectPrivacy,
         requiredDomain,
         techStack,
+        documentation: newFilenames,
         members: {
           create: {
-            charusatId: userData.charusatId,
+            charusatId,
             role: userData.role,
           },
         },
       },
     });
 
-    const updateUser = await prisma.user.update({
-      where: {
-        id: userData.id,
-      },
+    await prisma.user.update({
+      where: { id: userData.id },
       data: {
         currWorkingProjects: {
           push: newProject.id.toString(),
@@ -59,13 +79,9 @@ const createProject = async (req, res) => {
       },
     });
 
-    // console.log(newProject.members);
-
-    return res
-      .status(200)
-      .json({ message: "Project created successfully", project: newProject });
+    return res.status(200).json({ message: "Project created successfully", project: newProject });
   } catch (error) {
-    console.log(error);
+    console.error("Error creating project:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -75,7 +91,7 @@ const addMentor = async (req, res) => {
     const { charusatId, name, emailId } = req.body;
 
     const userData = await prisma.user.findUnique({
-      where: { id: req.body.userId },
+      where: { id: req.userId },
       select: {
         charusatId: true,
         role: true,
@@ -117,7 +133,8 @@ const addMentor = async (req, res) => {
 
 const sendRequest = async (req, res) => {
   try {
-    const { userId, projectId } = req.body;
+    const { projectId } = req.body;
+    const userId=req.userId;
 
     if (!userId || !projectId) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -199,8 +216,8 @@ const requestResult = async (req, res) => {
     const request = await prisma.prequest.findUnique({
       where: { id: requestId },
       include: {
-        user: true, // Get user details
-        project: true, // Get project details
+        user: true, 
+        project: true, 
       },
     });
 
@@ -274,7 +291,7 @@ const requestResult = async (req, res) => {
 const updateProject = async (req, res) => {
   try {
     const userData = await prisma.user.findUnique({
-      where: { id: req.body.userId },
+      where: { id: req.userId },
       select: {
         charusatId: true,
         role: true,
@@ -307,7 +324,7 @@ const updateProject = async (req, res) => {
 
     if (!projectExist) {
       return req.status(404).json({
-        msg: "Project Doesn not Exist",
+        msg: "Project Does not Exist",
       });
     }
 

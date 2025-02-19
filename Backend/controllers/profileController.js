@@ -19,9 +19,8 @@ const updateProfile = async (req, res) => {
       certificates,
     } = req.body;
 
-    const userId = req.body.userId;
+    const userId = req.userId;
 
-    // Fetch the existing profile to ensure it exists before updating
     const existingProfile = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -102,7 +101,6 @@ const updateProfile = async (req, res) => {
           const title = file.title;  
           const url = file.url;      
       
-          console.log('Processing certificate:', { title, url });
           return {
             title, 
             url,   
@@ -139,7 +137,7 @@ const updateProfile = async (req, res) => {
 
 const updateProfileImage_avtr = async (req, res) => {
   const { profileImage } = req.file; 
-  const userId=req.body.userId;
+  const userId=req.userId;
 
   if (profileImage) {
     try {
@@ -163,7 +161,6 @@ const updateProfileImage_avtr = async (req, res) => {
         }
       }
 
-      // Update the profile photo in the database
       await prisma.user.update({
         where: { id: req.user.id },
         data: { profilePhoto: newProfileImagePath },
@@ -189,7 +186,7 @@ const updateProfileImage_avtr = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const userId = req.body.userId; 
+    const userId = req.userId; 
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
