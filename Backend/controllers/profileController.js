@@ -136,14 +136,14 @@ const updateProfile = async (req, res) => {
 
 
 const updateProfileImage_avtr = async (req, res) => {
-  const { profileImage } = req.file; 
+  const profileImage = req.file; 
   const userId=req.userId;
 
   if (profileImage) {
     try {
-      const user=await prisma.user.findUnique({
-        id:userId
-      })
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
       if(!user || !user.charusatId){
         return res.status(404).json({ message: "CharusatId not found for the given userId" });
@@ -154,15 +154,15 @@ const updateProfileImage_avtr = async (req, res) => {
       const newProfileImagePath = `uploads/profileImages/${charusatId}_profileImage${path.extname(profileImage.originalname)}`;
 
       // Check and remove the old profile image file
-      if (req.user.profilePhoto) {
-        const oldFilePath = path.join(__dirname, `..${req.user.profilePhoto}`);
+      if (user.profilePhoto) {
+        const oldFilePath = path.join(process.cwd(), user.profilePhoto);
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath); // Delete the old file
         }
       }
 
       await prisma.user.update({
-        where: { id: req.user.id },
+        where: { id: user.id },
         data: { profilePhoto: newProfileImagePath },
       });
 
