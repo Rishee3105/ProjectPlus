@@ -20,9 +20,8 @@ const updateProfile = async (req, res) => {
       certificates,
     } = req.body;
 
-    const userId = req.body.userId;
+    const userId = req.userId;
 
-    // Fetch the existing profile to ensure it exists before updating
     const existingProfile = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -81,6 +80,45 @@ const updateProfile = async (req, res) => {
           })),
         });
       }
+
+      // Handle certificates addition
+      // if (certificates && certificates.length > 0) {
+      //   const charusatId = existingProfile.charusatId;
+      //   const certificateFiles = certificates.map((file) => ({
+      //     title: file.originalname,
+      //     url: `../uploads/certificates/${charusatId}_${file.originalname}`,
+      //     userId: userId,
+      //   }));
+
+      //   await prisma.certificate.createMany({
+      //     data: certificateFiles,
+      //   });
+      // }
+
+      if (certificates && certificates.length > 0) {
+        const charusatId = existingProfile.charusatId;
+        const certificateFiles = certificates.map((file) => {
+          const title = file.title;
+          const url = file.url;
+
+          return {
+            title,
+            url,
+            userId: userId,
+          };
+        });
+
+        if (certificateFiles.length > 0) {
+          await prisma.certificate.createMany({
+            data: certificateFiles,
+          });
+        } else {
+          console.log("No valid certificates to insert.");
+        }
+      } else {
+        console.log("No certificates provided.");
+      }
+
       return profile;
     });
 
@@ -99,7 +137,7 @@ const updateProfile = async (req, res) => {
 // Route to update or upload the profile Image of a particular User
 const updateProfileImage_avtr = async (req, res) => {
   const { profileImage } = req.file;
-  const userId = req.body.userId;
+  const userId = req.userId;
 
   if (profileImage) {
     try {
@@ -127,7 +165,6 @@ const updateProfileImage_avtr = async (req, res) => {
         }
       }
 
-      // Update the profile photo in the database
       await prisma.user.update({
         where: { id: req.user.id },
         data: { profilePhoto: newProfileImagePath },
@@ -222,7 +259,7 @@ const deleteCertificate = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const userId = req.body.userId;
+    const userId = req.userId;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
