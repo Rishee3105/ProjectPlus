@@ -102,6 +102,7 @@ const updateProfile = async (req, res) => {
 // Route to update or upload the profile Image of a particular User
 const updateProfileImage_avtr = async (req, res) => {
   const profileImage = req.file;
+
   const userId = req.userId;
 
   if (profileImage) {
@@ -118,9 +119,9 @@ const updateProfileImage_avtr = async (req, res) => {
 
       const charusatId = user.charusatId;
 
-      const newProfileImagePath = `uploads/profileImages/${charusatId}_profileImage${path.extname(
+      const newProfileImagePath = `uploads/profileImages/${charusatId}_${Date.now()}_${
         profileImage.originalname
-      )}`;
+      }`;
 
       if (user.profilePhoto) {
         const oldFilePath = path.join(process.cwd(), user.profilePhoto);
