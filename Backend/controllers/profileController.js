@@ -1,6 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { Console } from "console";
 import fs from "fs";
 import path from "path";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const prisma = new PrismaClient();
 
@@ -150,6 +155,9 @@ const updateProfileImage_avtr = async (req, res) => {
 const addCertificates = async (req, res) => {
   try {
     const userId = req.userId;
+    if (!userId) {
+      throw new Error("User ID is missing in request");
+    }
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.charusatId) {
       return res
@@ -159,7 +167,9 @@ const addCertificates = async (req, res) => {
     const charusatId = user.charusatId;
     const certificateFiles = req.files.map((file) => ({
       title: file.originalname,
-      url: `uploads/certificates/${charusatId}_${file.originalname}`,
+      url: `uploads/certificates/${charusatId}_${Date.now()}_${
+        file.originalname
+      }`,
       userId: userId,
     }));
 
@@ -182,7 +192,14 @@ const addCertificates = async (req, res) => {
 const deleteCertificate = async (req, res) => {
   try {
     const userId = req.userId;
-    const { certificateId } = req.body.certificateId;
+    if (!userId) {
+      throw new Error("User ID is missing in request");
+    }
+
+    const certificateId = Number(req.body.certificateId);
+    if (!certificateId || isNaN(certificateId)) {
+      return res.status(400).json({ message: "Invalid Certificate ID" });
+    }
 
     const certificate = await prisma.certificate.findUnique({
       where: { id: certificateId },

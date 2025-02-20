@@ -17,9 +17,7 @@ const profileImageStorage = multer.diskStorage({
       }
 
       const charusatId = user.charusatId;
-      const filename = `${charusatId}_${
-        file.originalname
-      }_${Date.now()}${path.extname(file.originalname)}`;
+      const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
       cb(null, filename);
     } catch (error) {
       cb(error, null);
@@ -48,9 +46,9 @@ const projectDocumentationStorage = multer.diskStorage({
       }
 
       const { pname } = req.body;
-      const filename = `${pname}_${user.charusatId}_${Date.now()}${path.extname(
+      const filename = `${pname}_${user.charusatId}_${Date.now()}_${
         file.originalname
-      )}`;
+      }`;
       cb(null, filename);
     } catch (error) {
       cb(error);
@@ -60,14 +58,19 @@ const projectDocumentationStorage = multer.diskStorage({
 
 export const uploadProjectDocumentation = multer({
   storage: projectDocumentationStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
 }).array("documentation", 5);
 
 const certificateStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,"uploads/certificates");
+    cb(null, "uploads/certificates");
   },
   filename: async (req, file, cb) => {
     try {
+      if (!req.userId) {
+        throw new Error("User ID is missing in request");
+      }
+
       const userId = req.userId;
       const user = await prisma.user.findUnique({ where: { id: userId } });
 
@@ -76,9 +79,7 @@ const certificateStorage = multer.diskStorage({
       }
 
       const charusatId = user.charusatId;
-      const filename = `${charusatId}_${
-        file.originalname
-      }_${Date.now()}${path.extname(file.originalname)}`;
+      const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
       cb(null, filename);
     } catch (error) {
       cb(error, null);
