@@ -253,4 +253,74 @@ const getProfile = async (req, res) => {
   }
 };
 
-export { updateProfile, getProfile,updateProfileImage_avtr };
+
+// Route to add Certificated of a Particular User
+const addCertificates = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.charusatId) {
+      return res
+        .status(404)
+        .json({ message: "CharusatId not found for the given userId" });
+    }
+    const charusatId = user.charusatId;
+    const certificateFiles = req.files.map((file) => ({
+      title: file.originalname,
+      url: `uploads/certificates/${charusatId}_${file.originalname}`,
+      userId: userId,
+    }));
+
+    await prisma.certificate.createMany({
+      data: certificateFiles,
+    });
+
+    res.status(200).json({
+      message: "Certificates uploaded successfully!",
+      certificates: certificateFiles,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error uploading certificates.", error: err.message });
+  }
+};
+
+const deleteCertificate = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { certificateId } = req.body.certificateId;
+
+    const certificate = await prisma.certificate.findUnique({
+      where: { id: certificateId },
+    });
+
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    if (certificate.userId !== userId) {
+      return res.status(403).json({
+        message: "You do not have permission to delete this certificate",
+      });
+    }
+
+    if (certificate.url) {
+      const filePath = path.join(__dirname, `${certificate.url}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await prisma.certificate.delete({
+      where: { id: certificateId },
+    });
+    res.status(200).json({ message: "Certificate deleted successfully!" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error deleting certificate.", error: err.message });
+  }
+};
+
+export { updateProfile, getProfile,updateProfileImage_avtr,deleteCertificate,addCertificates};

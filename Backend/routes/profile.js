@@ -1,6 +1,7 @@
 import express from "express";
-import { updateProfile, getProfile ,updateProfileImage_avtr} from "../controllers/profileController.js";
+import { updateProfile, getProfile ,updateProfileImage_avtr, addCertificates, deleteCertificate} from "../controllers/profileController.js";
 import {
+  uploadCertificates,
   uploadProfileImage,
 } from "../middleware/fileUploadMiddleware.js";
 import authMiddleware from "../middleware/auth.js";
@@ -15,25 +16,19 @@ profileRoute.post(
   updateProfileImage_avtr
 );
 
-// profileRoute.post(
-//   "/uploadCertificates",
-//   authMiddleware,
-//   (req, res) => {
-//     uploadCertificates(req, res, async (err) => {
-//       if (err) {
-//         return res
-//           .status(500)
-//           .json({
-//             message: "Error uploading certificates",
-//             error: err.message,
-//           });
-//       }
-//       req.files = req.files; // Ensure file details are available in the request
-//       next();
-//     });
-//   },
-//   updateProfile
-// );
+profileRoute.post(
+  "/addCertificates",
+  authMiddleware,
+  uploadCertificates,
+  addCertificates
+);
+profileRoute.delete(
+  "/deleteCertificate",
+  authMiddleware,
+  uploadCertificates,
+  deleteCertificate
+);
+
 
 profileRoute.get("/getProfile", authMiddleware, getProfile);
 

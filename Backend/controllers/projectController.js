@@ -49,18 +49,20 @@ const createProject = async (req, res) => {
       }
     }
 
+    const formattedFilenames = newFilenames.map((filePath) => filePath.replace(/\\/g, "/"));
+
     const newProject = await prisma.project.create({
       data: {
         pname,
         pdescription,
         pdefinition,
         phost: charusatId,
-        teamSize:teamSize-'0',
-        pduration:pduration-'0',
+        teamSize:Number(teamSize),
+        pduration:Number(pduration),
         projectPrivacy,
         requiredDomain,
         techStack,
-        documentation: newFilenames,
+        documentation: formattedFilenames,
         members: {
           create: {
             charusatId,
@@ -288,72 +290,102 @@ const requestResult = async (req, res) => {
   }
 };
 
+
 const updateProject = async (req, res) => {
   try {
+    let deleteDocs = [];
+    if (req.body.deleteDocs) {
+      try {
+        deleteDocs = JSON.parse(req.body.deleteDocs);
+        if (!Array.isArray(deleteDocs)) throw new Error("Invalid format");
+      } catch (error) {
+        return res.status(400).json({ msg: "Invalid JSON format in deleteDocs" });
+      }
+    }
+
+    console.log(deleteDocs);
+
     const userData = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: {
-        charusatId: true,
-        role: true,
-        id: true,
-      },
+      select: { charusatId: true, role: true, id: true },
     });
 
     if (!userData) {
       return res.status(404).json({ msg: "User Not Found" });
     }
 
-    const {
-      pname,
-      pdescription,
-      pdefinition,
-      teamSize,
-      pduration,
-      projectPrivacy,
-      requiredDomain,
-      techStack,
-      projectId,
-    } = req.body;
+    const { pname, pdescription, pdefinition, teamSize, pduration, projectPrivacy, requiredDomain, techStack, projectId } = req.body;
 
     const projectExist = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: {
-        phost: true,
-      },
+      where: { id: Number(projectId) },
+      select: { phost: true, documentation: true },
     });
 
     if (!projectExist) {
-      return req.status(404).json({
-        msg: "Project Does not Exist",
-      });
+      return res.status(404).json({ msg: "Project Does not Exist" });
     }
 
     if (userData.charusatId !== projectExist.phost) {
-      return req.status(403).json({
-        msg: "Only the project host can update this project",
-      });
+      return res.status(403).json({ msg: "Only the project host can update this project" });
     }
 
-    const updateProject = await prisma.project.update({
+    let updatedFilenames = projectExist.documentation || [];
+
+    if (deleteDocs.length > 0) {
+      const remainingFiles = await Promise.all(
+        updatedFilenames.map(async (docPath) => {
+          if (deleteDocs.includes(docPath)) {
+            try {
+              const filePath = path.join(process.cwd(), docPath);
+              if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath);
+                console.log(`Deleted file: ${filePath}`);
+              }
+            } catch (err) {
+              console.error(`Error deleting file: ${docPath}`, err);
+            }
+            return null; 
+          }
+          return docPath; 
+        })
+      );
+
+      updatedFilenames = remainingFiles.filter(Boolean);
+    }
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const newFilename = `${pname}_${userData.charusatId}_${Date.now()}${path.extname(file.originalname)}`;
+        const newPath = path.join("uploads/projectDocumentation", newFilename);
+
+        fs.renameSync(file.path, newPath);
+        updatedFilenames.push(newPath);
+      }
+    }
+
+    const formattedFilenames = updatedFilenames.map((filePath) => filePath.replace(/\\/g, "/"));
+
+    await prisma.project.update({
+      where: { id: Number(projectId) },
       data: {
         pname,
         pdescription,
         pdefinition,
-        teamSize,
-        pduration,
+        teamSize: Number(teamSize),
+        pduration: Number(pduration),
         projectPrivacy,
         requiredDomain,
         techStack,
+        documentation: formattedFilenames,
       },
     });
 
-    return res.status(200).json({
-      msg: "Project updated successfully",
-    });
+    return res.status(200).json({ msg: "Project updated successfully" });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export { createProject, addMentor, sendRequest, requestResult, updateProject };
