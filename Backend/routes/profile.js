@@ -1,14 +1,8 @@
 import express from "express";
+import { updateProfile, getProfile ,updateProfileImage_avtr, addCertificates, deleteCertificate} from "../controllers/profileController.js";
 import {
-  updateProfile,
-  getProfile,
-  updateProfileImage_avtr,
-  addCertificates,
-  deleteCertificate,
-} from "../controllers/profileController.js";
-import {
-  uploadProfileImage,
   uploadCertificates,
+  uploadProfileImage,
 } from "../middleware/fileUploadMiddleware.js";
 import authMiddleware from "../middleware/auth.js";
 
@@ -21,7 +15,7 @@ profileRoute.post(
   uploadProfileImage,
   updateProfileImage_avtr
 );
-profileRoute.get("/getProfile", authMiddleware, getProfile);
+
 profileRoute.post(
   "/addCertificates",
   authMiddleware,
@@ -34,5 +28,8 @@ profileRoute.delete(
   uploadCertificates,
   deleteCertificate
 );
+
+
+profileRoute.get("/getProfile", authMiddleware, getProfile);
 
 export default profileRoute;

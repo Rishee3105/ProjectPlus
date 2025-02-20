@@ -9,7 +9,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const prisma = new PrismaClient();
 
-// Route to update the profile of a particular user
 const updateProfile = async (req, res) => {
   try {
     const {
@@ -99,7 +98,6 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// Route to update or upload the profile Image of a particular User
 const updateProfileImage_avtr = async (req, res) => {
   const profileImage = req.file;
 
@@ -307,6 +305,6 @@ export {
   updateProfile,
   getProfile,
   updateProfileImage_avtr,
-  addCertificates,
   deleteCertificate,
+  addCertificates,
 };

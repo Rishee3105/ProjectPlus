@@ -31,7 +31,7 @@ export const uploadProfileImage = multer({
 
 const projectDocumentationStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/projectDocumentation");
+    cb(null,"uploads/projectDocumentation");
   },
   filename: async function (req, file, cb) {
     try {
