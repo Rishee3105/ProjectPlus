@@ -309,6 +309,7 @@ const requestResult = async (req, res) => {
   }
 };
 
+
 const updateProject = async (req, res) => {
   try {
     let deleteDocs = [];
@@ -400,7 +401,6 @@ const updateProject = async (req, res) => {
           .json({ msg: "User department or User institute not found" });
       }
 
-      // Define project folder path
       const projectFolder = path.join(
         "uploads/projectDocumentation",
         institute,
@@ -408,7 +408,6 @@ const updateProject = async (req, res) => {
         `${charusatId}_${pname}`
       );
 
-      // Ensure the folder exists
       if (!fs.existsSync(projectFolder)) {
         fs.mkdirSync(projectFolder, { recursive: true });
       }
@@ -420,12 +419,10 @@ const updateProject = async (req, res) => {
       }
     }
 
-    // Format filenames for storage
     const formattedFilenames = updatedFilenames.map((filePath) =>
       filePath.replace(/\\/g, "/")
     );
 
-    // 🔥 **Update Project in Database**
     await prisma.project.update({
       where: { id: Number(projectId) },
       data: {
@@ -448,4 +445,51 @@ const updateProject = async (req, res) => {
   }
 };
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject };
+
+const showPrequest = async (req, res) => {
+  try {
+    const { projectId } = req.body;
+
+    const projectRequests = await prisma.prequest.findMany({
+      where: { projectId: Number(projectId) },
+      select: {
+        userId: true,
+        status: true,
+      },
+    });
+
+    if (!projectRequests || projectRequests.length === 0) {
+      return res.status(404).json({ msg: "No requests found for this project" });
+    }
+
+    const requestsWithUserData = await Promise.all(
+      projectRequests.map(async (request) => {
+        const userData = await prisma.user.findUnique({
+          where: { id: request.userId },
+          select: {
+            profilePhoto: true,
+            firstName: true,
+            lastName: true,
+            charusatId: true,
+          },
+        });
+
+        return {
+          userId: request.userId,
+          status: request.status,
+          profilePhoto: userData?.profilePhoto || null,
+          firstName: userData?.firstName || "Unknown",
+          lastName: userData?.lastName || "Unknown",
+          charusatId: userData?.charusatId || "N/A",
+        };
+      })
+    );
+
+    return res.status(200).json({ msg: "Requests retrieved successfully", requests: requestsWithUserData });
+  } catch (error) {
+    console.error("Error fetching project requests:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest };
