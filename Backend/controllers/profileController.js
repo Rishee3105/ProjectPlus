@@ -148,41 +148,7 @@ const updateProfileImage_avtr = async (req, res) => {
   }
 };
 
-// // Route to add Certificated of a Particular User
-// const addCertificates = async (req, res) => {
-//   try {
-//     const userId = req.userId;
-//     if (!userId) {
-//       throw new Error("User ID is missing in request");
-//     }
-//     const user = await prisma.user.findUnique({ where: { id: userId } });
-//     if (!user || !user.charusatId) {
-//       return res
-//         .status(404)
-//         .json({ message: "CharusatId not found for the given userId" });
-//     }
-
-//     const certificateFiles = req.files.map((file) => ({
-//       title: file.originalname,
-//       url: `uploads/certificates/${file.filename}`,
-//       userId: userId,
-//     }));
-
-//     await prisma.certificate.createMany({
-//       data: certificateFiles,
-//     });
-
-//     res.status(200).json({
-//       message: "Certificates uploaded successfully!",
-//       certificates: certificateFiles,
-//     });
-//   } catch (err) {
-//     res
-//       .status(500)
-//       .json({ message: "Error uploading certificates.", error: err.message });
-//   }
-// };
-
+// Route to add Certificated of a Particular User
 const addCertificates = async (req, res) => {
   try {
     const userId = req.userId;
@@ -247,9 +213,13 @@ const deleteCertificate = async (req, res) => {
     const certificate = await prisma.certificate.findUnique({
       where: { id: certificateId },
     });
-
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.charusatId) {
+      return res.status(404).json({ message: "User Charusat ID not found" });
     }
 
     if (certificate.userId !== userId) {
@@ -258,16 +228,18 @@ const deleteCertificate = async (req, res) => {
       });
     }
 
-    if (certificate.url) {
-      const filePath = path.join(__dirname, `..${certificate.url}`);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    const filePath = path.join(
+      "uploads",
+      "certificates",
+      `${user.charusatId}_certificates`,
+      certificate.title
+    );
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
     }
 
-    await prisma.certificate.delete({
-      where: { id: certificateId },
-    });
+    await prisma.certificate.delete({ where: { id: certificateId } });
+
     res.status(200).json({ message: "Certificate deleted successfully!" });
   } catch (err) {
     res

@@ -92,20 +92,6 @@ const certificateStorage = multer.diskStorage({
       const userId = req.userId;
       const user = await prisma.user.findUnique({ where: { id: userId } });
 
-      // if (!user || !user.charusatId) {
-      //   throw new Error("CharusatId not found for the given userId");
-      // }
-
-      // const charusatId = user.charusatId;
-      // const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
-
-      // if (!req.body.filenames) {
-      //   req.body.filenames = [];
-      // }
-      // req.body.filenames.push(filename);
-
-      // cb(null, filename);
-
       if (!user || !user.charusatId) {
         return cb(new Error("User details not found"));
       }
