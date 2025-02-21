@@ -39,9 +39,7 @@ const createProject = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const newFilename = `${pname}_${charusatId}_${Date.now()}${path.extname(
-          file.originalname
-        )}`;
+        const newFilename = file.filename;
         const oldPath = file.path;
         const newPath = path.join("uploads/projectDocumentation", newFilename);
 
@@ -374,9 +372,7 @@ const updateProject = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const newFilename = `${pname}_${
-          userData.charusatId
-        }_${Date.now()}${path.extname(file.originalname)}`;
+        const newFilename = file.filename;
         const newPath = path.join("uploads/projectDocumentation", newFilename);
 
         fs.renameSync(file.path, newPath);

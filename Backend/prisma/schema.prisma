@@ -51,8 +51,8 @@ model User {
   socialLinks         String[] // Array of social media links
 
   // Relation to prequest
-  prequests prequest[]
-  resetCode String?
+  prequests        prequest[]
+  resetCode        String?
   resetCodeExpires DateTime?
 
   @@index([firstName, lastName]) // Index for name-based searches
@@ -95,7 +95,7 @@ model Certificate {
   id     Int     @id @default(autoincrement())
   userId Int
   title  String
-  url    String? 
+  url    String?
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -116,7 +116,7 @@ model Project {
   mentors        Mentor[]
   pduration      Int // Duration in months
   documentation  String[] // Links to documentation
-  deleteDocs  String[] // Links to documentation
+  deleteDocs     String[] // Links to documentation
   requiredDomain String
   techStack      String[]
   rating         Float? // Optional rating

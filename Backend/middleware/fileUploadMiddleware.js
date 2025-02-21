@@ -18,6 +18,7 @@ const profileImageStorage = multer.diskStorage({
 
       const charusatId = user.charusatId;
       const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
+      req.body.filename = filename;
       cb(null, filename);
     } catch (error) {
       cb(error, null);
@@ -31,7 +32,7 @@ export const uploadProfileImage = multer({
 
 const projectDocumentationStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null,"uploads/projectDocumentation");
+    cb(null, "uploads/projectDocumentation");
   },
   filename: async function (req, file, cb) {
     try {
@@ -49,6 +50,12 @@ const projectDocumentationStorage = multer.diskStorage({
       const filename = `${pname}_${user.charusatId}_${Date.now()}_${
         file.originalname
       }`;
+
+      if (!req.body.filenames) {
+        req.body.filenames = [];
+      }
+      req.body.filenames.push(filename);
+
       cb(null, filename);
     } catch (error) {
       cb(error);
@@ -80,6 +87,12 @@ const certificateStorage = multer.diskStorage({
 
       const charusatId = user.charusatId;
       const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
+
+      if (!req.body.filenames) {
+        req.body.filenames = [];
+      }
+      req.body.filenames.push(filename);
+
       cb(null, filename);
     } catch (error) {
       cb(error, null);

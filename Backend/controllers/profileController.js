@@ -115,11 +115,9 @@ const updateProfileImage_avtr = async (req, res) => {
           .json({ message: "CharusatId not found for the given userId" });
       }
 
-      const charusatId = user.charusatId;
+      const filename = req.body.filename;
 
-      const newProfileImagePath = `uploads/profileImages/${charusatId}_${Date.now()}_${
-        profileImage.originalname
-      }`;
+      const newProfileImagePath = filename;
 
       if (user.profilePhoto) {
         const oldFilePath = path.join(process.cwd(), user.profilePhoto);
@@ -163,12 +161,10 @@ const addCertificates = async (req, res) => {
         .status(404)
         .json({ message: "CharusatId not found for the given userId" });
     }
-    const charusatId = user.charusatId;
+
     const certificateFiles = req.files.map((file) => ({
       title: file.originalname,
-      url: `uploads/certificates/${charusatId}_${Date.now()}_${
-        file.originalname
-      }`,
+      url: `uploads/certificates/${file.filename}`,
       userId: userId,
     }));
 
