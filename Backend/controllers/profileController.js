@@ -115,11 +115,9 @@ const updateProfileImage_avtr = async (req, res) => {
           .json({ message: "CharusatId not found for the given userId" });
       }
 
-      const charusatId = user.charusatId;
+      const filename = req.body.filename;
 
-      const newProfileImagePath = `uploads/profileImages/${charusatId}_${Date.now()}_${
-        profileImage.originalname
-      }`;
+      const newProfileImagePath = filename;
 
       if (user.profilePhoto) {
         const oldFilePath = path.join(process.cwd(), user.profilePhoto);
@@ -157,20 +155,32 @@ const addCertificates = async (req, res) => {
     if (!userId) {
       throw new Error("User ID is missing in request");
     }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.charusatId) {
       return res
         .status(404)
         .json({ message: "CharusatId not found for the given userId" });
     }
-    const charusatId = user.charusatId;
-    const certificateFiles = req.files.map((file) => ({
-      title: file.originalname,
-      url: `uploads/certificates/${charusatId}_${Date.now()}_${
-        file.originalname
-      }`,
-      userId: userId,
-    }));
+
+    const uploadDir = path.join(
+      "uploads/certificates",
+      `${user.charusatId}_certificates/`
+    );
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const certificateFiles = req.files.map((file) => {
+      const newFilePath = path.join(uploadDir, file.originalname);
+      fs.renameSync(file.path, newFilePath);
+
+      return {
+        title: file.originalname,
+        url: newFilePath.replace(/\\/g, "/"),
+        userId: userId,
+      };
+    });
 
     await prisma.certificate.createMany({
       data: certificateFiles,
@@ -203,9 +213,13 @@ const deleteCertificate = async (req, res) => {
     const certificate = await prisma.certificate.findUnique({
       where: { id: certificateId },
     });
-
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.charusatId) {
+      return res.status(404).json({ message: "User Charusat ID not found" });
     }
 
     if (certificate.userId !== userId) {
@@ -214,16 +228,18 @@ const deleteCertificate = async (req, res) => {
       });
     }
 
-    if (certificate.url) {
-      const filePath = path.join(__dirname, `..${certificate.url}`);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    const filePath = path.join(
+      "uploads",
+      "certificates",
+      `${user.charusatId}_certificates`,
+      certificate.title
+    );
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
     }
 
-    await prisma.certificate.delete({
-      where: { id: certificateId },
-    });
+    await prisma.certificate.delete({ where: { id: certificateId } });
+
     res.status(200).json({ message: "Certificate deleted successfully!" });
   } catch (err) {
     res

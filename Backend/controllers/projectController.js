@@ -4,7 +4,6 @@ import path from "path";
 import fs from "fs";
 const prisma = new PrismaClient();
 
-
 const createProject = async (req, res) => {
   try {
     if (!req.userId) {
@@ -18,7 +17,7 @@ const createProject = async (req, res) => {
         role: true,
         id: true,
         department: true,
-        institute:true, 
+        institute: true,
       },
     });
 
@@ -37,7 +36,7 @@ const createProject = async (req, res) => {
       techStack,
     } = req.body;
 
-    const { charusatId, department,institute } = userData;
+    const { charusatId, department, institute } = userData;
     if (!department) {
       return res.status(400).json({ message: "User department not found" });
     }
@@ -107,7 +106,6 @@ const createProject = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 const addMentor = async (req, res) => {
   try {
@@ -329,7 +327,13 @@ const updateProject = async (req, res) => {
 
     const userData = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { charusatId: true, role: true, id: true,department: true,institute:true},
+      select: {
+        charusatId: true,
+        role: true,
+        id: true,
+        department: true,
+        institute: true,
+      },
     });
 
     if (!userData) {
@@ -388,10 +392,12 @@ const updateProject = async (req, res) => {
     }
 
     if (req.files && req.files.length > 0) {
-      const { department, charusatId,institute } = userData;
+      const { department, charusatId, institute } = userData;
 
       if (!department || !institute) {
-        return res.status(400).json({ msg: "User department or User institute not found" });
+        return res
+          .status(400)
+          .json({ msg: "User department or User institute not found" });
       }
 
       // Define project folder path

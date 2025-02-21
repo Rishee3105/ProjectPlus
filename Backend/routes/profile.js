@@ -1,5 +1,11 @@
 import express from "express";
-import { updateProfile, getProfile ,updateProfileImage_avtr, addCertificates, deleteCertificate} from "../controllers/profileController.js";
+import {
+  updateProfile,
+  getProfile,
+  updateProfileImage_avtr,
+  addCertificates,
+  deleteCertificate,
+} from "../controllers/profileController.js";
 import {
   uploadCertificates,
   uploadProfileImage,
@@ -28,7 +34,6 @@ profileRoute.delete(
   uploadCertificates,
   deleteCertificate
 );
-
 
 profileRoute.get("/getProfile", authMiddleware, getProfile);
 

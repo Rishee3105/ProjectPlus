@@ -22,8 +22,11 @@ projectRoute.post("/addMentor", authMiddleware, addMentor);
 projectRoute.post("/sendRequest", authMiddleware, sendRequest);
 projectRoute.post("/requestResult", authMiddleware, requestResult);
 // projectRoute.post("/updateProject", authMiddleware,uploadProjectDocumentation,updateProject);
-projectRoute.post("/updateProject", authMiddleware, uploadProjectDocumentation, updateProject);
-projectRoute.get("/allPrequest",authMiddleware,showPrequest)
-
+projectRoute.post(
+  "/updateProject",
+  authMiddleware,
+  uploadProjectDocumentation,
+  updateProject
+);
 
 export default projectRoute;
