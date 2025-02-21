@@ -309,7 +309,6 @@ const requestResult = async (req, res) => {
   }
 };
 
-
 const updateProject = async (req, res) => {
   try {
     let deleteDocs = [];
@@ -445,7 +444,6 @@ const updateProject = async (req, res) => {
   }
 };
 
-
 const showPrequest = async (req, res) => {
   try {
     const { projectId } = req.body;
@@ -459,7 +457,9 @@ const showPrequest = async (req, res) => {
     });
 
     if (!projectRequests || projectRequests.length === 0) {
-      return res.status(404).json({ msg: "No requests found for this project" });
+      return res
+        .status(404)
+        .json({ msg: "No requests found for this project" });
     }
 
     const requestsWithUserData = await Promise.all(
@@ -485,11 +485,21 @@ const showPrequest = async (req, res) => {
       })
     );
 
-    return res.status(200).json({ msg: "Requests retrieved successfully", requests: requestsWithUserData });
+    return res.status(200).json({
+      msg: "Requests retrieved successfully",
+      requests: requestsWithUserData,
+    });
   } catch (error) {
     console.error("Error fetching project requests:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest };
+export {
+  createProject,
+  addMentor,
+  sendRequest,
+  requestResult,
+  updateProject,
+  showPrequest,
+};
