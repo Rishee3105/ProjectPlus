@@ -325,11 +325,11 @@ const updateProject = async (req, res) => {
       }
     }
 
-    console.log(deleteDocs);
+    // console.log(deleteDocs);
 
     const userData = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { charusatId: true, role: true, id: true },
+      select: { charusatId: true, role: true, id: true,department: true,institute:true},
     });
 
     if (!userData) {
@@ -388,21 +388,38 @@ const updateProject = async (req, res) => {
     }
 
     if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const newFilename = `${userData.charusatId}_${pname}_${Date.now()}${path.extname(
-          file.originalname
-        )}`;
-        const newPath = path.join("uploads/projectDocumentation", newFilename);
+      const { department, charusatId,institute } = userData;
 
+      if (!department || !institute) {
+        return res.status(400).json({ msg: "User department or User institute not found" });
+      }
+
+      // Define project folder path
+      const projectFolder = path.join(
+        "uploads/projectDocumentation",
+        institute,
+        department,
+        `${charusatId}_${pname}`
+      );
+
+      // Ensure the folder exists
+      if (!fs.existsSync(projectFolder)) {
+        fs.mkdirSync(projectFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(projectFolder, file.originalname);
         fs.renameSync(file.path, newPath);
         updatedFilenames.push(newPath);
       }
     }
 
+    // Format filenames for storage
     const formattedFilenames = updatedFilenames.map((filePath) =>
       filePath.replace(/\\/g, "/")
     );
 
+    // 🔥 **Update Project in Database**
     await prisma.project.update({
       where: { id: Number(projectId) },
       data: {
@@ -420,7 +437,7 @@ const updateProject = async (req, res) => {
 
     return res.status(200).json({ msg: "Project updated successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Error updating project:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
