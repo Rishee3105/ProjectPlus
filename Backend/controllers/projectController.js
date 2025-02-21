@@ -1,15 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 import nodemailer from "nodemailer";
+import path from "path";
+import fs from "fs";
 const prisma = new PrismaClient();
 
 const createProject = async (req, res) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized - No User ID" });
+    }
+
     const userData = await prisma.user.findUnique({
-      where: { id: req.body.userId },
+      where: { id: req.userId },
       select: {
         charusatId: true,
         role: true,
         id: true,
+        department: true,
+        institute: true,
       },
     });
 
@@ -28,30 +36,61 @@ const createProject = async (req, res) => {
       techStack,
     } = req.body;
 
+    const { charusatId, department, institute } = userData;
+    if (!department) {
+      return res.status(400).json({ message: "User department not found" });
+    }
+
+    // Define storage path
+    const projectFolder = path.join(
+      "uploads/projectDocumentation",
+      institute,
+      department,
+      `${charusatId}_${pname}`
+    );
+
+    // Ensure the folder exists
+    if (!fs.existsSync(projectFolder)) {
+      fs.mkdirSync(projectFolder, { recursive: true });
+    }
+
+    const newFilenames = [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const newPath = path.join(projectFolder, file.originalname);
+        fs.renameSync(file.path, newPath);
+        newFilenames.push(newPath);
+      }
+    }
+
+    const formattedFilenames = newFilenames.map((filePath) =>
+      filePath.replace(/\\/g, "/")
+    );
+
     const newProject = await prisma.project.create({
       data: {
         pname,
         pdescription,
         pdefinition,
-        phost: userData.charusatId,
-        teamSize,
-        pduration,
+        phost: charusatId,
+        teamSize: Number(teamSize),
+        pduration: Number(pduration),
         projectPrivacy,
         requiredDomain,
         techStack,
+        documentation: formattedFilenames,
         members: {
           create: {
-            charusatId: userData.charusatId,
+            charusatId,
             role: userData.role,
           },
         },
       },
     });
 
-    const updateUser = await prisma.user.update({
-      where: {
-        id: userData.id,
-      },
+    await prisma.user.update({
+      where: { id: userData.id },
       data: {
         currWorkingProjects: {
           push: newProject.id.toString(),
@@ -59,13 +98,11 @@ const createProject = async (req, res) => {
       },
     });
 
-    // console.log(newProject.members);
-
     return res
       .status(200)
       .json({ message: "Project created successfully", project: newProject });
   } catch (error) {
-    console.log(error);
+    console.error("Error creating project:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -75,7 +112,7 @@ const addMentor = async (req, res) => {
     const { charusatId, name, emailId } = req.body;
 
     const userData = await prisma.user.findUnique({
-      where: { id: req.body.userId },
+      where: { id: req.userId },
       select: {
         charusatId: true,
         role: true,
@@ -117,7 +154,8 @@ const addMentor = async (req, res) => {
 
 const sendRequest = async (req, res) => {
   try {
-    const { userId, projectId } = req.body;
+    const { projectId } = req.body;
+    const userId = req.userId;
 
     if (!userId || !projectId) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -199,8 +237,8 @@ const requestResult = async (req, res) => {
     const request = await prisma.prequest.findUnique({
       where: { id: requestId },
       include: {
-        user: true, // Get user details
-        project: true, // Get project details
+        user: true,
+        project: true,
       },
     });
 
@@ -271,6 +309,187 @@ const requestResult = async (req, res) => {
   }
 };
 
-const updateProject = async (req, res) => {};
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject };
+const updateProject = async (req, res) => {
+  try {
+    let deleteDocs = [];
+    if (req.body.deleteDocs) {
+      try {
+        deleteDocs = JSON.parse(req.body.deleteDocs);
+        if (!Array.isArray(deleteDocs)) throw new Error("Invalid format");
+      } catch (error) {
+        return res
+          .status(400)
+          .json({ msg: "Invalid JSON format in deleteDocs" });
+      }
+    }
+
+    // console.log(deleteDocs);
+
+    const userData = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: {
+        charusatId: true,
+        role: true,
+        id: true,
+        department: true,
+        institute: true,
+      },
+    });
+
+    if (!userData) {
+      return res.status(404).json({ msg: "User Not Found" });
+    }
+
+    const {
+      pname,
+      pdescription,
+      pdefinition,
+      teamSize,
+      pduration,
+      projectPrivacy,
+      requiredDomain,
+      techStack,
+      projectId,
+    } = req.body;
+
+    const projectExist = await prisma.project.findUnique({
+      where: { id: Number(projectId) },
+      select: { phost: true, documentation: true },
+    });
+
+    if (!projectExist) {
+      return res.status(404).json({ msg: "Project Does not Exist" });
+    }
+
+    if (userData.charusatId !== projectExist.phost) {
+      return res
+        .status(403)
+        .json({ msg: "Only the project host can update this project" });
+    }
+
+    let updatedFilenames = projectExist.documentation || [];
+
+    if (deleteDocs.length > 0) {
+      const remainingFiles = await Promise.all(
+        updatedFilenames.map(async (docPath) => {
+          if (deleteDocs.includes(docPath)) {
+            try {
+              const filePath = path.join(process.cwd(), docPath);
+              if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath);
+                console.log(`Deleted file: ${filePath}`);
+              }
+            } catch (err) {
+              console.error(`Error deleting file: ${docPath}`, err);
+            }
+            return null;
+          }
+          return docPath;
+        })
+      );
+
+      updatedFilenames = remainingFiles.filter(Boolean);
+    }
+
+    if (req.files && req.files.length > 0) {
+      const { department, charusatId, institute } = userData;
+
+      if (!department || !institute) {
+        return res
+          .status(400)
+          .json({ msg: "User department or User institute not found" });
+      }
+
+      const projectFolder = path.join(
+        "uploads/projectDocumentation",
+        institute,
+        department,
+        `${charusatId}_${pname}`
+      );
+
+      if (!fs.existsSync(projectFolder)) {
+        fs.mkdirSync(projectFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(projectFolder, file.originalname);
+        fs.renameSync(file.path, newPath);
+        updatedFilenames.push(newPath);
+      }
+    }
+
+    const formattedFilenames = updatedFilenames.map((filePath) =>
+      filePath.replace(/\\/g, "/")
+    );
+
+    await prisma.project.update({
+      where: { id: Number(projectId) },
+      data: {
+        pname,
+        pdescription,
+        pdefinition,
+        teamSize: Number(teamSize),
+        pduration: Number(pduration),
+        projectPrivacy,
+        requiredDomain,
+        techStack,
+        documentation: formattedFilenames,
+      },
+    });
+
+    return res.status(200).json({ msg: "Project updated successfully" });
+  } catch (err) {
+    console.error("Error updating project:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+const showPrequest = async (req, res) => {
+  try {
+    const { projectId } = req.body;
+
+    const projectRequests = await prisma.prequest.findMany({
+      where: { projectId: Number(projectId) },
+      select: {
+        userId: true,
+        status: true,
+      },
+    });
+
+    if (!projectRequests || projectRequests.length === 0) {
+      return res.status(404).json({ msg: "No requests found for this project" });
+    }
+
+    const requestsWithUserData = await Promise.all(
+      projectRequests.map(async (request) => {
+        const userData = await prisma.user.findUnique({
+          where: { id: request.userId },
+          select: {
+            profilePhoto: true,
+            firstName: true,
+            lastName: true,
+            charusatId: true,
+          },
+        });
+
+        return {
+          userId: request.userId,
+          status: request.status,
+          profilePhoto: userData?.profilePhoto || null,
+          firstName: userData?.firstName || "Unknown",
+          lastName: userData?.lastName || "Unknown",
+          charusatId: userData?.charusatId || "N/A",
+        };
+      })
+    );
+
+    return res.status(200).json({ msg: "Requests retrieved successfully", requests: requestsWithUserData });
+  } catch (error) {
+    console.error("Error fetching project requests:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest };
