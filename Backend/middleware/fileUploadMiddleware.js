@@ -92,22 +92,42 @@ const certificateStorage = multer.diskStorage({
       const userId = req.userId;
       const user = await prisma.user.findUnique({ where: { id: userId } });
 
+      // if (!user || !user.charusatId) {
+      //   throw new Error("CharusatId not found for the given userId");
+      // }
+
+      // const charusatId = user.charusatId;
+      // const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
+
+      // if (!req.body.filenames) {
+      //   req.body.filenames = [];
+      // }
+      // req.body.filenames.push(filename);
+
+      // cb(null, filename);
+
       if (!user || !user.charusatId) {
-        throw new Error("CharusatId not found for the given userId");
+        return cb(new Error("User details not found"));
       }
 
-      const charusatId = user.charusatId;
-      const filename = `${charusatId}_${Date.now()}_${file.originalname}`;
+      const certificateFolder = path.join(
+        "uploads/certificates",
+        `${user.charusatId}_certificates`
+      );
 
-      if (!req.body.filenames) {
-        req.body.filenames = [];
+      // Ensure the folder exists
+      if (!fs.existsSync(certificateFolder)) {
+        fs.mkdirSync(certificateFolder, { recursive: true });
       }
-      req.body.filenames.push(filename);
 
-      cb(null, filename);
+      cb(null, certificateFolder);
     } catch (error) {
       cb(error, null);
     }
+  },
+  filename: function (req, file, cb) {
+    // Keep the original file name
+    cb(null, file.originalname);
   },
 });
 

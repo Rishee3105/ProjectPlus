@@ -148,13 +148,48 @@ const updateProfileImage_avtr = async (req, res) => {
   }
 };
 
-// Route to add Certificated of a Particular User
+// // Route to add Certificated of a Particular User
+// const addCertificates = async (req, res) => {
+//   try {
+//     const userId = req.userId;
+//     if (!userId) {
+//       throw new Error("User ID is missing in request");
+//     }
+//     const user = await prisma.user.findUnique({ where: { id: userId } });
+//     if (!user || !user.charusatId) {
+//       return res
+//         .status(404)
+//         .json({ message: "CharusatId not found for the given userId" });
+//     }
+
+//     const certificateFiles = req.files.map((file) => ({
+//       title: file.originalname,
+//       url: `uploads/certificates/${file.filename}`,
+//       userId: userId,
+//     }));
+
+//     await prisma.certificate.createMany({
+//       data: certificateFiles,
+//     });
+
+//     res.status(200).json({
+//       message: "Certificates uploaded successfully!",
+//       certificates: certificateFiles,
+//     });
+//   } catch (err) {
+//     res
+//       .status(500)
+//       .json({ message: "Error uploading certificates.", error: err.message });
+//   }
+// };
+
 const addCertificates = async (req, res) => {
   try {
     const userId = req.userId;
     if (!userId) {
       throw new Error("User ID is missing in request");
     }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.charusatId) {
       return res
@@ -162,11 +197,24 @@ const addCertificates = async (req, res) => {
         .json({ message: "CharusatId not found for the given userId" });
     }
 
-    const certificateFiles = req.files.map((file) => ({
-      title: file.originalname,
-      url: `uploads/certificates/${file.filename}`,
-      userId: userId,
-    }));
+    const uploadDir = path.join(
+      "uploads/certificates",
+      `${user.charusatId}_certificates/`
+    );
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const certificateFiles = req.files.map((file) => {
+      const newFilePath = path.join(uploadDir, file.originalname);
+      fs.renameSync(file.path, newFilePath);
+
+      return {
+        title: file.originalname,
+        url: newFilePath.replace(/\\/g, "/"),
+        userId: userId,
+      };
+    });
 
     await prisma.certificate.createMany({
       data: certificateFiles,
