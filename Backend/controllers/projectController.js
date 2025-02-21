@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 const prisma = new PrismaClient();
 
+
 const createProject = async (req, res) => {
   try {
     if (!req.userId) {
@@ -16,6 +17,8 @@ const createProject = async (req, res) => {
         charusatId: true,
         role: true,
         id: true,
+        department: true,
+        institute:true, 
       },
     });
 
@@ -34,19 +37,30 @@ const createProject = async (req, res) => {
       techStack,
     } = req.body;
 
-    const charusatId = userData.charusatId;
+    const { charusatId, department,institute } = userData;
+    if (!department) {
+      return res.status(400).json({ message: "User department not found" });
+    }
+
+    // Define storage path
+    const projectFolder = path.join(
+      "uploads/projectDocumentation",
+      institute,
+      department,
+      `${charusatId}_${pname}`
+    );
+
+    // Ensure the folder exists
+    if (!fs.existsSync(projectFolder)) {
+      fs.mkdirSync(projectFolder, { recursive: true });
+    }
+
     const newFilenames = [];
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const newFilename = `${pname}_${charusatId}_${Date.now()}${path.extname(
-          file.originalname
-        )}`;
-        const oldPath = file.path;
-        const newPath = path.join("uploads/projectDocumentation", newFilename);
-
-        // Rename the file
-        fs.renameSync(oldPath, newPath);
+        const newPath = path.join(projectFolder, file.originalname);
+        fs.renameSync(file.path, newPath);
         newFilenames.push(newPath);
       }
     }
@@ -93,6 +107,7 @@ const createProject = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 const addMentor = async (req, res) => {
   try {
@@ -374,9 +389,9 @@ const updateProject = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const newFilename = `${pname}_${
-          userData.charusatId
-        }_${Date.now()}${path.extname(file.originalname)}`;
+        const newFilename = `${userData.charusatId}_${pname}_${Date.now()}${path.extname(
+          file.originalname
+        )}`;
         const newPath = path.join("uploads/projectDocumentation", newFilename);
 
         fs.renameSync(file.path, newPath);
