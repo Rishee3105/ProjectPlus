@@ -1,5 +1,6 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
@@ -37,35 +38,45 @@ const projectDocumentationStorage = multer.diskStorage({
   filename: async function (req, file, cb) {
     try {
       if (!req.userId) {
-        throw new Error("User ID is missing in request");
+        return cb(new Error("User ID is missing in request"));
       }
 
-      const user = await prisma.user.findUnique({ where: { id: req.userId } });
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { charusatId: true, department: true, institute: true },
+      });
 
-      if (!user || !user.charusatId) {
-        throw new Error("CharusatId not found for the given userId");
+      if (!user || !user.charusatId || !user.department || !user.institute) {
+        return cb(new Error("User details not found"));
       }
 
       const { pname } = req.body;
-      const filename = `${pname}_${user.charusatId}_${Date.now()}_${
-        file.originalname
-      }`;
+      const projectFolder = path.join(
+        "uploads/projectDocumentation",
+        user.institute,
+        user.department,
+        `${user.charusatId}_${pname}`
+      );
 
-      if (!req.body.filenames) {
-        req.body.filenames = [];
+      // Ensure the folder exists
+      if (!fs.existsSync(projectFolder)) {
+        fs.mkdirSync(projectFolder, { recursive: true });
       }
-      req.body.filenames.push(filename);
 
-      cb(null, filename);
+      cb(null, projectFolder);
     } catch (error) {
       cb(error);
     }
+  },
+  filename: function (req, file, cb) {
+    // Keep the original file name
+    cb(null, file.originalname);
   },
 });
 
 export const uploadProjectDocumentation = multer({
   storage: projectDocumentationStorage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 }).array("documentation", 5);
 
 const certificateStorage = multer.diskStorage({
