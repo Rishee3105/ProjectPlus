@@ -442,4 +442,34 @@ const updateProject = async (req, res) => {
   }
 };
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject };
+const showPrequest=async(req,res)=>{
+
+  try {
+    const {peojectId}=req.body;
+    const ProjectRequest=await prisma.prequest({
+      where:{peojectId:peojectId},
+      select:{
+        userId:true,
+        status:true
+      }
+    })
+
+    const userData=await prisma.user({
+      where:{id:ProjectRequest.userId},
+      select:{
+        profilePhoto:true,
+        firstName:true,
+        lastName:true,
+        charusatId:true // URL to profile photo
+      }
+    })
+
+    
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest };

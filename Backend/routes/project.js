@@ -5,6 +5,7 @@ import {
   sendRequest,
   requestResult,
   updateProject,
+  showPrequest,
 } from "../controllers/projectController.js";
 import authMiddleware from "../middleware/auth.js";
 import { uploadProjectDocumentation } from "../middleware/fileUploadMiddleware.js";
@@ -22,6 +23,7 @@ projectRoute.post("/sendRequest", authMiddleware, sendRequest);
 projectRoute.post("/requestResult", authMiddleware, requestResult);
 // projectRoute.post("/updateProject", authMiddleware,uploadProjectDocumentation,updateProject);
 projectRoute.post("/updateProject", authMiddleware, uploadProjectDocumentation, updateProject);
+projectRoute.get("/allPrequest",authMiddleware,showPrequest)
 
 
 export default projectRoute;
