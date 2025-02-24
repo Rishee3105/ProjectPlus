@@ -6,7 +6,7 @@ import {
   requestResult,
   updateProject,
   showPrequest,
-  getAllProjects,
+  getUserCurrWorkingProject,
 } from "../controllers/projectController.js";
 import authMiddleware from "../middleware/auth.js";
 import { uploadProjectDocumentation } from "../middleware/fileUploadMiddleware.js";
@@ -28,7 +28,7 @@ projectRoute.post(
   uploadProjectDocumentation,
   updateProject
 );
-projectRoute.get("/showPrequest", authMiddleware, showPrequest);
-projectRoute.get("/getAllProjects", authMiddleware, getAllProjects);
+projectRoute.get("/showPrequest",authMiddleware,showPrequest);
+projectRoute.get("/getUserCurrWorkingProject",authMiddleware,getUserCurrWorkingProject);
 
 export default projectRoute;
