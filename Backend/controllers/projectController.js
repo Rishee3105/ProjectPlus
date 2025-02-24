@@ -222,6 +222,7 @@ const sendRequest = async (req, res) => {
   }
 };
 
+
 const requestResult = async (req, res) => {
   try {
     const { requestId, status } = req.body;
@@ -254,6 +255,15 @@ const requestResult = async (req, res) => {
           projectId: request.project.id,
         },
       });
+
+      await prisma.user.update({
+        where: { id: request.userId },
+        data: {
+          currWorkingProjects: {
+            push: request.projectId.toString(), 
+          },
+        },
+      });
     }
 
     await prisma.prequest.update({
@@ -280,7 +290,7 @@ const requestResult = async (req, res) => {
       emailHtml = `
         <p>Hi ${request.user.firstName},</p>
         <p>Your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:green;">approved</strong> by the host.</p>
-        <p>Welcome to the team! 🚀</p>
+        <p>The project has been added to your working projects list. Welcome to the team! 🚀</p>
         <p>Best regards,<br>Project Management Team</p>
       `;
     } else {
@@ -308,6 +318,7 @@ const requestResult = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 const updateProject = async (req, res) => {
@@ -492,4 +503,42 @@ const showPrequest = async (req, res) => {
   }
 };
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest };
+
+const getUserCurrWorkingProject = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { currWorkingProjects: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.currWorkingProjects || user.currWorkingProjects.length === 0) {
+      return res.status(404).json({msg:"You have no current Working projects"}); 
+    }
+
+    const projectIds = user.currWorkingProjects
+      .map((id) => parseInt(id, 10)) 
+      .filter((id) => !isNaN(id)); 
+
+    const projects = await prisma.project.findMany({
+      where: { id: { in: projectIds } },
+    });
+
+    return res.json(projects);
+  } catch (error) {
+    console.error("Error fetching current working projects:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest,getUserCurrWorkingProject };
