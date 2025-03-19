@@ -12,6 +12,8 @@ const prisma = new PrismaClient();
 const updateProfile = async (req, res) => {
   try {
     const {
+      firstName,
+      lastName,
       domain,
       aboutMe,
       currCgpa,
@@ -38,6 +40,8 @@ const updateProfile = async (req, res) => {
       const profile = await prisma.user.update({
         where: { id: userId },
         data: {
+          firstName,
+          lastName,
           domain,
           aboutMe,
           currCgpa,

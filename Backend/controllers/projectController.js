@@ -495,6 +495,27 @@ const showPrequest = async (req, res) => {
   }
 };
 
+const getAllProjects = async (req, res) => {
+  try {
+    const allProjects = await prisma.project.findMany();
+
+    if (!allProjects || allProjects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No Project Found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "All Data of Project fetched successfully",
+      projects: allProjects,
+    });
+  } catch (err) {
+    console.log("Error Fetching all Project from the DB: ", err);
+    return res.status(500).json({ message: "Internal Server error" });
+  }
+};
+
 export {
   createProject,
   addMentor,
@@ -502,4 +523,5 @@ export {
   requestResult,
   updateProject,
   showPrequest,
+  getAllProjects,
 };

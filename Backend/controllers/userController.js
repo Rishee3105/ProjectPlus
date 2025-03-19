@@ -19,8 +19,17 @@ const registerSchema = zod.object({
   password: zod.string().min(8),
 });
 
-const createToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET);
+const createToken = (id, charusatId, role, firstName, lastName) => {
+  const payload = {
+    id,
+    charusatId,
+    role,
+    firstName,
+    lastName,
+  };
+  const secretKey = process.env.JWT_SECRET;
+  const options = { expiresIn: "2d" };
+  return jwt.sign(payload, secretKey, options);
 };
 
 const registerUser = async (req, res) => {
@@ -105,7 +114,13 @@ const registerUser = async (req, res) => {
       `,
     });
 
-    const token = createToken(user.id);
+    const token = createToken(
+      user.id,
+      user.charusatId,
+      user.role,
+      user.firstName,
+      user.lastName
+    );
     return res
       .status(201)
       .json({ token, message: "User created and email sent successfully" });
@@ -157,7 +172,13 @@ const signinUser = async (req, res) => {
       });
     }
 
-    const token = createToken(user.id);
+    const token = createToken(
+      user.id,
+      user.charusatId,
+      user.role,
+      user.firstName,
+      user.lastName
+    );
     return res.status(200).json({
       token,
       message: "Sign-in Successful",

@@ -24,15 +24,16 @@ datasource db {
 // User Profile
 // Domain , skills , About Me , Experience (Internship) , Achievements , Projects , Social Links , Projects Links , Certificates , Curr CGPA , Contact Info , Profile Photo 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  firstName    String
-  lastName     String
-  password     String
-  role         UserRole
-  charusatId   String   @unique
-  institute    String
-  department   String
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  firstName  String
+  lastName   String
+  password   String
+  role       UserRole
+  charusatId String   @unique
+  institute  String
+  department String
+
   domain       String? // Domain of expertise
   aboutMe      String? // Brief introduction
   currCgpa     Float? // Current CGPA
@@ -123,6 +124,7 @@ model Project {
   prequest       prequest[]
   suggestions    Suggestion[] // Linked suggestions with time tracking
   projectPrivacy ProjectPrivacy
+  upvotes        Int            @default(0)
 
   @@index([pname, phost]) // Optimized for search by project name and host
 }
