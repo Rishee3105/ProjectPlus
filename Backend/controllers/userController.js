@@ -252,12 +252,10 @@ const verifyEmail = async (req, res) => {
       user.lastName
     );
 
-    return res
-      .status(200)
-      .json({
-        token: tokenResponse,
-        message: "Email verified successfully. You can now log in.",
-      });
+    return res.status(200).json({
+      token: tokenResponse,
+      message: "Email verified successfully. You can now log in.",
+    });
   } catch (error) {
     console.error("Error:", error.message);
     return res.status(500).json({ message: "Internal server error" });

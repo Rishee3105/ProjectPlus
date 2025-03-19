@@ -222,7 +222,6 @@ const sendRequest = async (req, res) => {
   }
 };
 
-
 const requestResult = async (req, res) => {
   try {
     const { requestId, status } = req.body;
@@ -260,7 +259,7 @@ const requestResult = async (req, res) => {
         where: { id: request.userId },
         data: {
           currWorkingProjects: {
-            push: request.projectId.toString(), 
+            push: request.projectId.toString(),
           },
         },
       });
@@ -318,8 +317,6 @@ const requestResult = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-
 
 const updateProject = async (req, res) => {
   try {
@@ -507,6 +504,26 @@ const showPrequest = async (req, res) => {
   }
 };
 
+const getAllProjects = async (req, res) => {
+  try {
+    const allProjects = await prisma.project.findMany();
+
+    if (!allProjects || allProjects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No Project Found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "All Data of Project fetched successfully",
+      projects: allProjects,
+    });
+  } catch (err) {
+    console.log("Error Fetching all Project from the DB: ", err);
+    return res.status(500).json({ message: "Internal Server error" });
+  }
+};
 
 const getUserCurrWorkingProject = async (req, res) => {
   try {
@@ -526,12 +543,14 @@ const getUserCurrWorkingProject = async (req, res) => {
     }
 
     if (!user.currWorkingProjects || user.currWorkingProjects.length === 0) {
-      return res.status(404).json({msg:"You have no current Working projects"}); 
+      return res
+        .status(404)
+        .json({ msg: "You have no current Working projects" });
     }
 
     const projectIds = user.currWorkingProjects
-      .map((id) => parseInt(id, 10)) 
-      .filter((id) => !isNaN(id)); 
+      .map((id) => parseInt(id, 10))
+      .filter((id) => !isNaN(id));
 
     const projects = await prisma.project.findMany({
       where: { id: { in: projectIds } },
@@ -544,5 +563,13 @@ const getUserCurrWorkingProject = async (req, res) => {
   }
 };
 
-
-export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest,getUserCurrWorkingProject };
+export {
+  createProject,
+  addMentor,
+  sendRequest,
+  requestResult,
+  updateProject,
+  showPrequest,
+  getUserCurrWorkingProject,
+  getAllProjects,
+};
