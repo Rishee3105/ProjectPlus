@@ -145,6 +145,7 @@ const registerUser = async (req, res) => {
     }
 
     const exists = await prisma.user.findUnique({ where: { email } });
+    const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -165,12 +166,29 @@ const registerUser = async (req, res) => {
       department,
       institute,
       createdAt: Date.now(),
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    console.log(verificationToken);
+
+    tempUsers.set(verificationToken, {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role,
+      charusatId,
+      department,
+      institute,
+      createdAt: Date.now(),
     });
+
+    const verificationLink = `http://localhost:3000/user/verify-email?token=${verificationToken}`;
 
     const verificationLink = `http://localhost:3000/user/verify-email?token=${verificationToken}`;
 
     const transporter = nodemailer.createTransport({
       service: "Gmail",
+      auth: { user: process.env.EMAIL, pass: process.env.PASSWORD },
+      tls: { rejectUnauthorized: false },
       auth: { user: process.env.EMAIL, pass: process.env.PASSWORD },
       tls: { rejectUnauthorized: false },
     });
@@ -179,8 +197,12 @@ const registerUser = async (req, res) => {
       from: process.env.EMAIL,
       to: email,
       subject: "Verify Your Email",
+      subject: "Verify Your Email",
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2>Verify Your Email</h2>
+          <p>Click the button below to verify your email:</p>
+          <a href="${verificationLink}" style="text-decoration: none;">
           <h2>Verify Your Email</h2>
           <p>Click the button below to verify your email:</p>
           <a href="${verificationLink}" style="text-decoration: none;">
@@ -249,6 +271,39 @@ const verifyEmail = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token || !tempUsers.has(token)) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    const userData = tempUsers.get(token);
+    
+    const user = await prisma.user.create({
+      data: {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role,
+        charusatId: userData.charusatId,
+        department: userData.department,
+        institute: userData.institute,
+        profilePhoto: "uploads/profileImages/default_avtar.jpg",
+      },
+    });
+
+    tempUsers.delete(token);
+
+    return res.status(200).json({ message: "Email verified successfully. You can now log in." });
+  } catch (error) {
+    console.error("Error:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 
 const signinSchema = zod.object({
@@ -410,4 +465,5 @@ const verifyCodeAndResetPassword = async (req, res) => {
   }
 };
 
+export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword,verifyEmail};
 export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword,verifyEmail};
