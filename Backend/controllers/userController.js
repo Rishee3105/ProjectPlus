@@ -32,28 +32,119 @@ const createToken = (id, charusatId, role, firstName, lastName) => {
   return jwt.sign(payload, secretKey, options);
 };
 
+// const registerUser = async (req, res) => {
+//   try {
+//     const {
+//       firstName,
+//       lastName,
+//       email,
+//       password,
+//       role,
+//       charusatId,
+//       department,
+//       institute,
+//     } = req.body;
+
+//     const { success } = registerSchema.safeParse(req.body);
+//     if (!success) {
+//       return res.status(400).json({ message: "Invalid data" });
+//     }
+
+//     const exists = await prisma.user.findUnique({
+//       where: { email },
+//     });
+
+//     if (exists) {
+//       return res.status(400).json({ message: "User already exists" });
+//     }
+
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     const user = await prisma.user.create({
+//       data: {
+//         firstName,
+//         lastName,
+//         email,
+//         password: hashedPassword,
+//         role,
+//         charusatId,
+//         department,
+//         institute,
+//         profilePhoto: "uploads/profileImages/default_avtar.jpg",
+//       },
+//     });
+
+//     // Send verification email
+//     const transporter = nodemailer.createTransport({
+//       service: "Gmail",
+//       auth: {
+//         user: process.env.EMAIL,
+//         pass: process.env.PASSWORD,
+//       },
+//       tls: {
+//         rejectUnauthorized: false,
+//       },
+//     });
+
+//     await transporter.sendMail({
+//       from: process.env.EMAIL,
+//       to: email,
+//       subject: "Email Verification",
+//       html: `
+//         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+//           <h2>Email Verification</h2>
+//           <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
+//           <a href="http://localhost:3000/user/signin" style="text-decoration: none;">
+//             <button style="
+//               display: inline-block;
+//               background-color: #4CAF50;
+//               color: white;
+//               padding: 10px 20px;
+//               font-size: 16px;
+//               border: none;
+//               border-radius: 5px;
+//               cursor: pointer;
+//             ">
+//               Verify Email
+//             </button>
+//           </a>
+//           <p>If you didn't request this email, please ignore it.</p>
+//         </div>
+//       `,
+//     });
+
+//     const token = createToken(user.id);
+//     return res
+//       .status(201)
+//       .json({ token, message: "User created and email sent successfully" });
+//   } catch (error) {
+//     console.error("Error:", error.message);
+
+//     // Handle email-specific errors gracefully
+//     if (error.message.includes("Missing credentials for")) {
+//       return res
+//         .status(500)
+//         .json({ message: "Email credentials are missing or invalid" });
+//     }
+
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+
+const tempUsers = new Map(); // Temporary storage 
+
 const registerUser = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      role,
-      charusatId,
-      department,
-      institute,
-    } = req.body;
+    const { firstName, lastName, email, password, role, charusatId, department, institute } = req.body;
 
     const { success } = registerSchema.safeParse(req.body);
     if (!success) {
       return res.status(400).json({ message: "Invalid data" });
     }
 
-    const exists = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -61,41 +152,38 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        password: hashedPassword,
-        role,
-        charusatId,
-        department,
-        institute,
-        profilePhoto: "uploads/profileImages/default_avtar.jpg",
-      },
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    console.log(verificationToken);
+
+    tempUsers.set(verificationToken, {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role,
+      charusatId,
+      department,
+      institute,
+      createdAt: Date.now(),
     });
 
-    // Send verification email
+    const verificationLink = `http://localhost:3000/user/verify-email?token=${verificationToken}`;
+
     const transporter = nodemailer.createTransport({
       service: "Gmail",
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
+      auth: { user: process.env.EMAIL, pass: process.env.PASSWORD },
+      tls: { rejectUnauthorized: false },
     });
 
     await transporter.sendMail({
       from: process.env.EMAIL,
       to: email,
-      subject: "Email Verification",
+      subject: "Verify Your Email",
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <h2>Email Verification</h2>
-          <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
-          <a href="http://localhost:3000/user/signin" style="text-decoration: none;">
+          <h2>Verify Your Email</h2>
+          <p>Click the button below to verify your email:</p>
+          <a href="${verificationLink}" style="text-decoration: none;">
             <button style="
               display: inline-block;
               background-color: #4CAF50;
@@ -109,7 +197,7 @@ const registerUser = async (req, res) => {
               Verify Email
             </button>
           </a>
-          <p>If you didn't request this email, please ignore it.</p>
+          <p>If you didn't sign up, ignore this email.</p>
         </div>
       `,
     });
@@ -126,17 +214,42 @@ const registerUser = async (req, res) => {
       .json({ token, message: "User created and email sent successfully" });
   } catch (error) {
     console.error("Error:", error.message);
-
-    // Handle email-specific errors gracefully
-    if (error.message.includes("Missing credentials for")) {
-      return res
-        .status(500)
-        .json({ message: "Email credentials are missing or invalid" });
-    }
-
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token || !tempUsers.has(token)) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    const userData = tempUsers.get(token);
+    
+    const user = await prisma.user.create({
+      data: {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role,
+        charusatId: userData.charusatId,
+        department: userData.department,
+        institute: userData.institute,
+        profilePhoto: "uploads/profileImages/default_avtar.jpg",
+      },
+    });
+
+    tempUsers.delete(token);
+
+    return res.status(200).json({ message: "Email verified successfully. You can now log in." });
+  } catch (error) {
+    console.error("Error:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 const signinSchema = zod.object({
   email: zod.string().email(),
@@ -297,4 +410,4 @@ const verifyCodeAndResetPassword = async (req, res) => {
   }
 };
 
-export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword };
+export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword,verifyEmail};
