@@ -5,6 +5,7 @@ dotenv.config();
 import userRoute from "./routes/user.js";
 import projectRoute from "./routes/project.js";
 import profileRoute from "./routes/profile.js";
+import cors from "cors"
 
 const app = express();
 const prisma = new PrismaClient();
@@ -26,6 +27,12 @@ async function connect() {
 }
 connect();
 
+app.use(cors({
+  origin: "*",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use("/uploads", express.static("uploads"));
 app.use(express.json());
 

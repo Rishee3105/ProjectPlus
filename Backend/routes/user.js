@@ -1,9 +1,9 @@
 import express from "express";
-import { signinUser, registerUser, forgotPassword, verifyCodeAndResetPassword, verifyEmail} from "../controllers/userController.js";
+import { signinUser, registerUser, forgotPassword, verifyCodeAndResetPassword} from "../controllers/userController.js";
 const userRoute = express.Router();
 
 userRoute.post("/register", registerUser);
-userRoute.get("/verify", verifyEmail);
+// userRoute.get("/verify", verifyEmail);
 userRoute.post("/signin", signinUser);
 userRoute.get("/signin", (req, res) => {
   res.send("Hello");

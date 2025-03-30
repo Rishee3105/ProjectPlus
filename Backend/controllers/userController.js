@@ -13,7 +13,7 @@ const registerSchema = zod.object({
     .string()
     .email()
     .regex(
-      /^([\w._%+-]+@charusat\.edu\.in|[\w._%+-]+@charusat\.ac\.in)$/,
+      /^([\w.%+-]+@charusat\.edu\.in|[\w.%+-]+@charusat\.ac\.in)$/,
       "Invalid email format"
     ),
   password: zod.string().min(8),
@@ -123,8 +123,7 @@ const createToken = (id) => {
 //   }
 // };
 
-
-const tempUsers = new Map(); // Temporary storage 
+const tempUsers = new Map(); // Temporary storage
 
 const registerUser = async (req, res) => {
   try {
@@ -143,95 +142,33 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    console.log(verificationToken);
-
-    tempUsers.set(verificationToken, {
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      role,
-      charusatId,
-      department,
-      institute,
-      createdAt: Date.now(),
-    });
-
-    const verificationLink = `http://localhost:3000/user/verify-email?token=${verificationToken}`;
-
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: { user: process.env.EMAIL, pass: process.env.PASSWORD },
-      tls: { rejectUnauthorized: false },
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: email,
-      subject: "Verify Your Email",
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <h2>Verify Your Email</h2>
-          <p>Click the button below to verify your email:</p>
-          <a href="${verificationLink}" style="text-decoration: none;">
-            <button style="
-              display: inline-block;
-              background-color: #4CAF50;
-              color: white;
-              padding: 10px 20px;
-              font-size: 16px;
-              border: none;
-              border-radius: 5px;
-              cursor: pointer;
-            ">
-              Verify Email
-            </button>
-          </a>
-          <p>If you didn't sign up, ignore this email.</p>
-        </div>
-      `,
-    });
-
-    return res.status(200).json({ message: "Verification email sent. Please verify your email." });
-  } catch (error) {
-    console.error("Error:", error.message);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-const verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token || !tempUsers.has(token)) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
-
-    const userData = tempUsers.get(token);
-    
+    // Create user directly without email verification
     const user = await prisma.user.create({
       data: {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        password: userData.password,
-        role: userData.role,
-        charusatId: userData.charusatId,
-        department: userData.department,
-        institute: userData.institute,
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        role,
+        charusatId,
+        department,
+        institute,
         profilePhoto: "uploads/profileImages/default_avtar.jpg",
       },
     });
 
-    tempUsers.delete(token);
+    // Create and return token immediately
+    const token = createToken(user.id);
+    return res.status(201).json({ 
+      token, 
+      message: "User registered successfully" 
+    });
 
-    return res.status(200).json({ message: "Email verified successfully. You can now log in." });
   } catch (error) {
     console.error("Error:", error.message);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 const signinSchema = zod.object({
   email: zod.string().email(),
@@ -386,4 +323,10 @@ const verifyCodeAndResetPassword = async (req, res) => {
   }
 };
 
-export { registerUser, signinUser, forgotPassword, verifyCodeAndResetPassword,verifyEmail};
+export {
+  registerUser,
+  signinUser,
+  forgotPassword,
+  verifyCodeAndResetPassword,
+  // verifyEmail,
+};

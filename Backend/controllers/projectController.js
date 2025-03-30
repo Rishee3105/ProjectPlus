@@ -457,7 +457,7 @@ const updateProject = async (req, res) => {
 };
 
 
-const showPrequest = async (req, res) => {
+const showPrequestForParticularProject = async (req, res) => {
   try {
     const { projectId } = req.body;
 
@@ -503,6 +503,65 @@ const showPrequest = async (req, res) => {
   }
 };
 
+const showHostedProjectRequests = async (req, res) => {
+  try {
+    // Assume req.userId is the ID of the currently logged-in user
+    const { userId } = req;
+
+    const userData=await prisma.user.findUnique({
+      where:{id:userId}
+    })
+    
+    // Find all projects where the user is the host
+    const hostedProjects = await prisma.project.findMany({
+      where: { phost: userData.charusatId },
+      select: {
+        id: true,
+        pname: true,
+        prequest: {
+          select: {
+            userId: true,
+            status: true,
+            user: {
+              select: {
+                profilePhoto: true,
+                firstName: true,
+                lastName: true,
+                charusatId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // If no projects found, return an empty response
+    if (!hostedProjects || hostedProjects.length === 0) {
+      return res.status(404).json({ msg: "No hosted projects found" });
+    }
+    
+    // Format the response to include project requests
+    const projectRequests = hostedProjects.map(project => ({
+      projectId: project.id,
+      projectName: project.pname,
+      requests: project.prequest.map(request => ({
+        userId: request.userId,
+        status: request.status,
+        profilePhoto: request.user?.profilePhoto || null,
+        firstName: request.user?.firstName || "Unknown",
+        lastName: request.user?.lastName || "Unknown",
+        charusatId: request.user?.charusatId || "N/A",
+      })),
+    }));
+
+    return res.status(200).json({ msg: "Hosted project requests retrieved successfully", data: projectRequests });
+  } catch (error) {
+    console.error("Error fetching hosted project requests:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 
 const getUserCurrWorkingProject = async (req, res) => {
   try {
@@ -541,4 +600,4 @@ const getUserCurrWorkingProject = async (req, res) => {
 };
 
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequest,getUserCurrWorkingProject };
+export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequestForParticularProject,showHostedProjectRequests,getUserCurrWorkingProject };
