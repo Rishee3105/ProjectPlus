@@ -19,120 +19,56 @@ const registerSchema = zod.object({
   password: zod.string().min(8),
 });
 
-const createToken = (id, charusatId, role, firstName, lastName) => {
-  const payload = {
-    id,
-    charusatId,
-    role,
-    firstName,
-    lastName,
-  };
-  const secretKey = process.env.JWT_SECRET;
-  const options = { expiresIn: "2d" };
-  return jwt.sign(payload, secretKey, options);
+const generateRandomVerificationCode = () => {
+  return crypto.randomInt(100000, 999999).toString();
 };
 
-// const registerUser = async (req, res) => {
-//   try {
-//     const {
-//       firstName,
-//       lastName,
-//       email,
-//       password,
-//       role,
-//       charusatId,
-//       department,
-//       institute,
-//     } = req.body;
+const sendVerificationEmail = async (email, verificationCode) => {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.PASSWORD,
+    },
+    tls: { rejectUnauthorized: false },
+  });
 
-//     const { success } = registerSchema.safeParse(req.body);
-//     if (!success) {
-//       return res.status(400).json({ message: "Invalid data" });
-//     }
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: "Your Verification Code",
+    html: `
+      <div style="max-width: 500px; margin: auto; font-family: Arial, sans-serif; border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
+        <h2 style="text-align: center; color: #4CAF50;">Verification Code</h2>
+        <p style="font-size: 16px; color: #333;">Hello,</p>
+        <p style="font-size: 16px; color: #333;">Your verification code is:</p>
+        <div style="text-align: center; font-size: 24px; font-weight: bold; color: #4CAF50; padding: 10px; border: 2px dashed #4CAF50; display: inline-block; border-radius: 5px;">
+          ${verificationCode}
+        </div>
+        <p style="font-size: 14px; color: #666; margin-top: 20px;">This code will expire in 1 hour. Do not share this code with anyone.</p>
+        <p style="font-size: 14px; color: #666;">If you did not request this, please ignore this email.</p>
+        <p style="font-size: 14px; color: #666;">Best Regards,<br>Project Plus Team</p>
+      </div>
+    `,
+  };
 
-//     const exists = await prisma.user.findUnique({
-//       where: { email },
-//     });
+  await transporter.sendMail(mailOptions);
+};
 
-//     if (exists) {
-//       return res.status(400).json({ message: "User already exists" });
-//     }
+const removeExpiredUser = async (email) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
 
-//     const salt = await bcrypt.genSalt(10);
-//     const hashedPassword = await bcrypt.hash(password, salt);
+    if (!user || user.verificationCode === null) return;
 
-//     const user = await prisma.user.create({
-//       data: {
-//         firstName,
-//         lastName,
-//         email,
-//         password: hashedPassword,
-//         role,
-//         charusatId,
-//         department,
-//         institute,
-//         profilePhoto: "uploads/profileImages/default_avtar.jpg",
-//       },
-//     });
-
-//     // Send verification email
-//     const transporter = nodemailer.createTransport({
-//       service: "Gmail",
-//       auth: {
-//         user: process.env.EMAIL,
-//         pass: process.env.PASSWORD,
-//       },
-//       tls: {
-//         rejectUnauthorized: false,
-//       },
-//     });
-
-//     await transporter.sendMail({
-//       from: process.env.EMAIL,
-//       to: email,
-//       subject: "Email Verification",
-//       html: `
-//         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-//           <h2>Email Verification</h2>
-//           <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
-//           <a href="http://localhost:3000/user/signin" style="text-decoration: none;">
-//             <button style="
-//               display: inline-block;
-//               background-color: #4CAF50;
-//               color: white;
-//               padding: 10px 20px;
-//               font-size: 16px;
-//               border: none;
-//               border-radius: 5px;
-//               cursor: pointer;
-//             ">
-//               Verify Email
-//             </button>
-//           </a>
-//           <p>If you didn't request this email, please ignore it.</p>
-//         </div>
-//       `,
-//     });
-
-//     const token = createToken(user.id);
-//     return res
-//       .status(201)
-//       .json({ token, message: "User created and email sent successfully" });
-//   } catch (error) {
-//     console.error("Error:", error.message);
-
-//     // Handle email-specific errors gracefully
-//     if (error.message.includes("Missing credentials for")) {
-//       return res
-//         .status(500)
-//         .json({ message: "Email credentials are missing or invalid" });
-//     }
-
-//     return res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
-const tempUsers = new Map(); // Temporary storage
+    if (new Date(user.expiresAt) < new Date()) {
+      await prisma.user.delete({ where: { email } });
+      console.log(`🗑️ Expired unverified user removed: ${email}`);
+    }
+  } catch (error) {
+    console.error("❌ Error removing expired user:", error.message);
+  }
+};
 
 const registerUser = async (req, res) => {
   try {
@@ -147,154 +83,108 @@ const registerUser = async (req, res) => {
       institute,
     } = req.body;
 
-    const { success } = registerSchema.safeParse(req.body);
-    if (!success) {
-      return res.status(400).json({ message: "Invalid data" });
+    const validation = registerSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ msg: "Invalid Data" });
     }
 
-    const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) {
-      return res.status(400).json({ message: "User already exists" });
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    const existingUserByCharusatId = await prisma.user.findUnique({
+      where: { charusatId },
+    });
+
+    if (existingUserByEmail && existingUserByCharusatId) {
+      return res
+        .status(409)
+        .json({ msg: "User with this email and Charusat ID already exists" });
+    } else if (existingUserByEmail) {
+      return res
+        .status(409)
+        .json({ msg: "User with this email already exists" });
+    } else if (existingUserByCharusatId) {
+      return res
+        .status(409)
+        .json({ msg: "User with this Charusat ID already exists" });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    console.log("Generated Token:", verificationToken);
+    const verificationCode = generateRandomVerificationCode();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    tempUsers.set(verificationToken, {
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      role,
-      charusatId,
-      department,
-      institute,
-      createdAt: Date.now(),
-    });
-
-    const verificationLink = `http://localhost:3000/user/verify-email?token=${verificationToken}`;
-
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: { user: process.env.EMAIL, pass: process.env.PASSWORD },
-      tls: { rejectUnauthorized: false },
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: email,
-      subject: "Verify Your Email",
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <h2>Verify Your Email</h2>
-          <p>Click the button below to verify your email:</p>
-          <a href="${verificationLink}" style="text-decoration: none;">
-            <button style="
-              display: inline-block;
-              background-color: #4CAF50;
-              color: white;
-              padding: 10px 20px;
-              font-size: 16px;
-              border: none;
-              border-radius: 5px;
-              cursor: pointer;
-            ">
-              Verify Email
-            </button>
-          </a>
-          <p>If you didn't sign up, ignore this email.</p>
-        </div>
-      `,
-    });
-
-    return res
-      .status(201)
-      .json({ message: "User created and email sent successfully" });
-  } catch (error) {
-    console.error("Error:", error.message);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-const verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token || !tempUsers.has(token)) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
-
-    const userData = tempUsers.get(token);
-
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        password: userData.password,
-        role: userData.role,
-        charusatId: userData.charusatId,
-        department: userData.department,
-        institute: userData.institute,
-        profilePhoto: "uploads/profileImages/default_avatar.jpg",
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        role,
+        charusatId,
+        department,
+        institute,
+        verificationCode,
+        expiresAt,
       },
     });
 
-    tempUsers.delete(token);
+    await sendVerificationEmail(email, verificationCode);
+    setTimeout(() => removeExpiredUser(email), 60 * 60 * 1000);
 
-    const tokenResponse = createToken(
-      user.id,
-      user.charusatId,
-      user.role,
-      user.firstName,
-      user.lastName
-    );
-
-    return res.status(200).json({
-      token: tokenResponse,
-      message: "Email verified successfully. You can now log in.",
-    });
+    return res
+      .status(200)
+      .json({ msg: "Verification email sent successfully!" });
   } catch (error) {
     console.error("Error:", error.message);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ msg: "Internal Server Error" });
   }
 };
 
-module.exports = { registerUser, verifyEmail };
+const verifyUser = async (req, res) => {
+  try {
+    const { email, verificationCode } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
 
-// const verifyEmail = async (req, res) => {
-//   try {
-//     const { token } = req.query;
-//     if (!token || !tempUsers.has(token)) {
-//       return res.status(400).json({ message: "Invalid or expired token" });
-//     }
+    if (!user || user.verificationCode !== verificationCode) {
+      return res
+        .status(400)
+        .json({ msg: "Invalid or expired verification code" });
+    }
 
-//     const userData = tempUsers.get(token);
+    if (new Date() > user.expiresAt) {
+      await prisma.user.delete({ where: { email } });
+      return res
+        .status(400)
+        .json({ msg: "Verification code expired, please register again" });
+    }
 
-//     const user = await prisma.user.create({
-//       data: {
-//         firstName: userData.firstName,
-//         lastName: userData.lastName,
-//         email: userData.email,
-//         password: userData.password,
-//         role: userData.role,
-//         charusatId: userData.charusatId,
-//         department: userData.department,
-//         institute: userData.institute,
-//         profilePhoto: "uploads/profileImages/default_avtar.jpg",
-//       },
-//     });
+    await prisma.user.update({
+      where: { email },
+      data: { verificationCode: null, expiresAt: null },
+    });
 
-//     tempUsers.delete(token);
+    return res.status(200).json({ msg: "User verified successfully!" });
+  } catch (error) {
+    console.error("Error verifying user:", error.message);
+    return res.status(500).json({ msg: "Internal Server Error" });
+  }
+};
 
-//     return res.status(200).json({ message: "Email verified successfully. You can now log in." });
-//   } catch (error) {
-//     console.error("Error:", error.message);
-//     return res.status(500).json({ message: "Internal server error" });
-//   }
-// };
+const createToken = (id, charusatId, role, firstName, lastName) => {
+  const payload = {
+    id,
+    charusatId,
+    role,
+    firstName,
+    lastName,
+  };
+  const secretKey = process.env.JWT_SECRET;
+  const options = { expiresIn: "2d" };
+  return jwt.sign(payload, secretKey, options);
+};
 
 const signinSchema = zod.object({
   email: zod.string().email(),
@@ -359,14 +249,14 @@ const forgotPassword = async (req, res) => {
       return res.json({ success: false, message: "User not exists" });
     }
 
-    const uniqueCode = crypto.randomBytes(3).toString("hex");
-    const expirationTime = new Date(Date.now() + 60000); //Code expires in 1 min
+    const verificationCode = generateRandomVerificationCode();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); //Code expires in 5 min
 
     await prisma.user.update({
       where: { email: email },
       data: {
-        resetCode: uniqueCode,
-        resetCodeExpires: expirationTime,
+        verificationCode: verificationCode,
+        expiresAt: expiresAt,
       },
     });
 
@@ -389,7 +279,7 @@ const forgotPassword = async (req, res) => {
           <p>We received a request to reset your password. Please use the code below to proceed with resetting your password:</p>
           <div style="text-align: center; margin: 20px 0;">
             <span style="font-size: 22px; font-weight: bold; padding: 10px 20px; background-color: #f4f4f4; border-radius: 5px; display: inline-block;">
-              ${uniqueCode}
+              ${verificationCode}
             </span>
           </div>
           <p>This code is valid for <strong>1 min</strong>. If you didn’t request a password reset, please ignore this email.</p>
@@ -407,6 +297,21 @@ const forgotPassword = async (req, res) => {
         message: "Password reset code sent to email.",
       });
     });
+
+    // Schedule deletion of verification code and expiresAt
+    setTimeout(async () => {
+      try {
+        await prisma.user.update({
+          where: { email: email },
+          data: {
+            verificationCode: null,
+            expiresAt: null,
+          },
+        });
+      } catch (error) {
+        console.error("Error clearing verification code:", error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
   } catch (error) {
     console.error(error);
     return res.json({ success: false, message: "Error resetting password." });
@@ -423,11 +328,11 @@ const verifyCodeAndResetPassword = async (req, res) => {
       return res.json({ success: false, message: "User does not exist" });
     }
 
-    let targetUser = userData;
+    const targetUser = userData;
 
     if (
-      targetUser.resetCode !== code ||
-      new Date() > new Date(targetUser.resetCodeExpires)
+      targetUser.verificationCode !== code ||
+      new Date() > new Date(targetUser.expiresAt)
     ) {
       return res.json({ success: false, message: "Invalid or expired code." });
     }
@@ -443,8 +348,8 @@ const verifyCodeAndResetPassword = async (req, res) => {
       where: { email: email },
       data: {
         password: hashedPassword,
-        resetCode: null,
-        resetCodeExpires: null,
+        verificationCode: null,
+        expiresAt: null,
       },
     });
 
@@ -457,15 +362,8 @@ const verifyCodeAndResetPassword = async (req, res) => {
 
 export {
   registerUser,
+  verifyUser,
   signinUser,
   forgotPassword,
   verifyCodeAndResetPassword,
-  verifyEmail,
-};
-export {
-  registerUser,
-  signinUser,
-  forgotPassword,
-  verifyCodeAndResetPassword,
-  verifyEmail,
 };
