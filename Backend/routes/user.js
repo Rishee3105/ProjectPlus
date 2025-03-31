@@ -5,15 +5,14 @@ import {
   forgotPassword,
   verifyCodeAndResetPassword,
   verifyUser,
+  userProfileDetails,
 } from "../controllers/userController.js";
 const userRoute = express.Router();
 
 userRoute.post("/register", registerUser);
 userRoute.post("/verify", verifyUser);
 userRoute.post("/signin", signinUser);
-userRoute.get("/signin", (req, res) => {
-  res.send("Hello");
-});
+userRoute.get("/profile", userProfileDetails);
 userRoute.post("/forgotPassword", forgotPassword);
 userRoute.post("/resetPassword", verifyCodeAndResetPassword);
 

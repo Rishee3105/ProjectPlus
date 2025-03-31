@@ -26,8 +26,8 @@ CREATE TABLE "users" (
     "currWorkingProjects" TEXT[],
     "achievements" TEXT[],
     "socialLinks" TEXT[],
-    "resetCode" TEXT,
-    "resetCodeExpires" TIMESTAMP(3),
+    "verificationCode" TEXT,
+    "expiresAt" TIMESTAMP(3),
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -89,6 +89,7 @@ CREATE TABLE "Project" (
     "techStack" TEXT[],
     "rating" DOUBLE PRECISION,
     "projectPrivacy" "ProjectPrivacy" NOT NULL,
+    "upvotes" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
 );

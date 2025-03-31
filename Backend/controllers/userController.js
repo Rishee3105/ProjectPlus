@@ -47,7 +47,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
         </div>
         <p style="font-size: 14px; color: #666; margin-top: 20px;">This code will expire in 1 hour. Do not share this code with anyone.</p>
         <p style="font-size: 14px; color: #666;">If you did not request this, please ignore this email.</p>
-        <p style="font-size: 14px; color: #666;">Best Regards,<br>Project Plus Team</p>
+        <p style="font-size: 14px; color: #666;">Best Regards,<br>ProjectPlus Team</p>
       </div>
     `,
   };
@@ -114,6 +114,8 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const verificationCode = generateRandomVerificationCode();
+    console.log(verificationCode);
+    
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.user.create({
@@ -263,13 +265,13 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "bakenest9@gmail.com",
-        pass: "aghm pbse asnm gbwv",
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
       },
     });
 
     const mailOptions = {
-      from: "bakenest9@gmail.com",
+      from: process.env.EMAIL,
       to: email,
       subject: "Reset Your Password - Action Required",
       html: `
@@ -360,10 +362,99 @@ const verifyCodeAndResetPassword = async (req, res) => {
   }
 };
 
+
+// const userProfileDetails = async (req, res) => {
+//   try {
+//     const charusatId = req.query.charusatId; 
+//     if (!charusatId) {
+//       return res.status(400).json({ message: "charusatId is required" });
+//     }
+
+//     const userData = await prisma.user.findUnique({
+//       where: { charusatId },
+//     });
+
+//     if (!userData) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     return res.status(200).json(userData);
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+
+const userProfileDetails = async (req, res) => {
+  try {
+    const charusatId = req.query.charusatId;
+    if (!charusatId) {
+      return res.status(400).json({ message: "charusatId is required" });
+    }
+
+    const userData = await prisma.user.findUnique({
+      where: { charusatId },
+      include: {
+        skills: true,
+        experiences: true,
+        projects: true,
+        certificates: true,
+      },
+    });
+
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Fetch details of current working projects
+    const currWorkingProjects = await prisma.project.findMany({
+      where: { id: { in: userData.currWorkingProjects.map(Number) } },
+      select: {
+        id: true,
+        pname: true,
+        pdescription: true,
+        phost: true,
+        teamSize: true,
+        techStack: true,
+        pduration: true,
+      },
+    });
+
+    return res.status(200).json({
+      id: userData.id,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      email: userData.email,
+      role: userData.role,
+      domain: userData.domain,
+      aboutMe: userData.aboutMe,
+      currCgpa: userData.currCgpa,
+      phoneNumber: userData.phoneNumber,
+      profilePhoto: userData.profilePhoto,
+      institute: userData.institute, // Added Institute
+      department: userData.department, // Added Department
+      skills: userData.skills.map((skill) => skill.skill),
+      experiences: userData.experiences,
+      projects: userData.projects,
+      certificates: userData.certificates,
+      achievements: userData.achievements,
+      socialLinks: userData.socialLinks,
+      currWorkingProjects, // Now includes project details instead of just IDs
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
 export {
   registerUser,
   verifyUser,
   signinUser,
   forgotPassword,
   verifyCodeAndResetPassword,
+  userProfileDetails
 };

@@ -9,6 +9,99 @@ import { fileURLToPath } from "url";
 
 const prisma = new PrismaClient();
 
+// const updateProfile = async (req, res) => {
+//   try {
+//     const {
+//       firstName,
+//       lastName,
+//       domain,
+//       aboutMe,
+//       currCgpa,
+//       phoneNumber,
+//       skills,
+//       achievements,
+//       socialLinks,
+//       experiences,
+//       projects,
+//     } = req.body;
+
+//     const userId = req.userId;
+
+//     const existingProfile = await prisma.user.findUnique({
+//       where: { id: userId },
+//     });
+
+//     if (!existingProfile) {
+//       return res.status(404).json({ message: "Profile not found" });
+//     }
+
+//     // Update the profile using a transaction to ensure atomicity
+//     const updatedProfile = await prisma.$transaction(async (prisma) => {
+//       const profile = await prisma.user.update({
+//         where: { id: userId },
+//         data: {
+//           firstName,
+//           lastName,
+//           domain,
+//           aboutMe,
+//           currCgpa,
+//           phoneNumber,
+//           achievements,
+//           socialLinks,
+//         },
+//       });
+
+//       // Rewrite associated data
+//       // Delete existing skills for the user
+//       await prisma.userSkill.deleteMany({ where: { userId } });
+//       if (skills && skills.length > 0) {
+//         await prisma.userSkill.createMany({
+//           data: skills.map((skill) => ({
+//             userId,
+//             skill,
+//           })),
+//         });
+//       }
+
+//       await prisma.experience.deleteMany({ where: { userId } });
+//       if (experiences && experiences.length > 0) {
+//         await prisma.experience.createMany({
+//           data: experiences.map((exp) => ({
+//             userId,
+//             title: exp.title,
+//             company: exp.company,
+//             duration: exp.duration,
+//             description: exp.description || null,
+//           })),
+//         });
+//       }
+
+//       await prisma.userProject.deleteMany({ where: { userId } });
+//       if (projects && projects.length > 0) {
+//         await prisma.userProject.createMany({
+//           data: projects.map((proj) => ({
+//             userId,
+//             title: proj.title,
+//             link: proj.link || null,
+//             details: proj.details || null,
+//           })),
+//         });
+//       }
+//       return profile;
+//     });
+
+//     return res
+//       .status(200)
+//       .json({ message: "Profile updated successfully", updatedProfile });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       error: "Error updating profile",
+//       details: error.message,
+//     });
+//   }
+// };
+
 const updateProfile = async (req, res) => {
   try {
     const {
@@ -35,6 +128,10 @@ const updateProfile = async (req, res) => {
       return res.status(404).json({ message: "Profile not found" });
     }
 
+    // Ensure achievements and socialLinks are arrays
+    const formattedAchievements = Array.isArray(achievements) ? achievements : [];
+    const formattedSocialLinks = Array.isArray(socialLinks) ? socialLinks : [];
+
     // Update the profile using a transaction to ensure atomicity
     const updatedProfile = await prisma.$transaction(async (prisma) => {
       const profile = await prisma.user.update({
@@ -46,8 +143,8 @@ const updateProfile = async (req, res) => {
           aboutMe,
           currCgpa,
           phoneNumber,
-          achievements,
-          socialLinks,
+          achievements: formattedAchievements,
+          socialLinks: formattedSocialLinks,
         },
       });
 
@@ -87,6 +184,7 @@ const updateProfile = async (req, res) => {
           })),
         });
       }
+
       return profile;
     });
 
@@ -101,6 +199,7 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 const updateProfileImage_avtr = async (req, res) => {
   const profileImage = req.file;
