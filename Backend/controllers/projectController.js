@@ -25,6 +25,8 @@ const createProject = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    console.log(req.body);
+
     const {
       pname,
       pdescription,
@@ -32,8 +34,8 @@ const createProject = async (req, res) => {
       teamSize,
       pduration,
       projectPrivacy,
-      requiredDomain,
       techStack,
+      requiredDomain,
     } = req.body;
 
     const { charusatId, department, institute } = userData;
