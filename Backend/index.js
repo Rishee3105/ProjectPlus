@@ -9,7 +9,6 @@ import cors from "cors";
 
 const app = express();
 const prisma = new PrismaClient();
-app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
@@ -28,6 +27,14 @@ async function connect() {
 }
 connect();
 
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use("/uploads", express.static("uploads"));
 app.use(express.json());
 

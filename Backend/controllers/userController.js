@@ -13,7 +13,7 @@ const registerSchema = zod.object({
     .string()
     .email()
     .regex(
-      /^([\w._%+-]+@charusat\.edu\.in|[\w._%+-]+@charusat\.ac\.in)$/,
+      /^([\w.%+-]+@charusat\.edu\.in|[\w.%+-]+@charusat\.ac\.in)$/,
       "Invalid email format"
     ),
   password: zod.string().min(8),

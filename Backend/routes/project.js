@@ -5,7 +5,8 @@ import {
   sendRequest,
   requestResult,
   updateProject,
-  showPrequest,
+  showPrequestForParticularProject,
+  showHostedProjectRequests,
   getUserCurrWorkingProject,
   getAllProjects,
 } from "../controllers/projectController.js";
@@ -29,12 +30,8 @@ projectRoute.post(
   uploadProjectDocumentation,
   updateProject
 );
-projectRoute.get("/showPrequest", authMiddleware, showPrequest);
-projectRoute.get("/getAllProjects", authMiddleware, getAllProjects);
-projectRoute.get(
-  "/getUserCurrWorkingProject",
-  authMiddleware,
-  getUserCurrWorkingProject
-);
+projectRoute.get("/showPrequestForParticularProject",authMiddleware,showPrequestForParticularProject);
+projectRoute.get("/showHostedProjectRequests",authMiddleware,showHostedProjectRequests);
+projectRoute.get("/getUserCurrWorkingProject",authMiddleware,getUserCurrWorkingProject);
 
 export default projectRoute;
