@@ -30,8 +30,21 @@ projectRoute.post(
   uploadProjectDocumentation,
   updateProject
 );
-projectRoute.get("/showPrequestForParticularProject",authMiddleware,showPrequestForParticularProject);
-projectRoute.get("/showHostedProjectRequests",authMiddleware,showHostedProjectRequests);
-projectRoute.get("/getUserCurrWorkingProject",authMiddleware,getUserCurrWorkingProject);
+projectRoute.get(
+  "/showPrequestForParticularProject",
+  authMiddleware,
+  showPrequestForParticularProject
+);
+projectRoute.get(
+  "/showHostedProjectRequests",
+  authMiddleware,
+  showHostedProjectRequests
+);
+projectRoute.get(
+  "/getUserCurrWorkingProject",
+  authMiddleware,
+  getUserCurrWorkingProject
+);
+projectRoute.get("/getAllProjects", authMiddleware, getAllProjects);
 
 export default projectRoute;

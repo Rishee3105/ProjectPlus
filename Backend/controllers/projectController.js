@@ -453,7 +453,6 @@ const updateProject = async (req, res) => {
   }
 };
 
-
 const showPrequestForParticularProject = async (req, res) => {
   try {
     const { projectId } = req.body;
@@ -510,10 +509,10 @@ const showHostedProjectRequests = async (req, res) => {
     // Assume req.userId is the ID of the currently logged-in user
     const { userId } = req;
 
-    const userData=await prisma.user.findUnique({
-      where:{id:userId}
-    })
-    
+    const userData = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
     // Find all projects where the user is the host
     const hostedProjects = await prisma.project.findMany({
       where: { phost: userData.charusatId },
@@ -541,12 +540,12 @@ const showHostedProjectRequests = async (req, res) => {
     if (!hostedProjects || hostedProjects.length === 0) {
       return res.status(404).json({ msg: "No hosted projects found" });
     }
-    
+
     // Format the response to include project requests
-    const projectRequests = hostedProjects.map(project => ({
+    const projectRequests = hostedProjects.map((project) => ({
       projectId: project.id,
       projectName: project.pname,
-      requests: project.prequest.map(request => ({
+      requests: project.prequest.map((request) => ({
         userId: request.userId,
         status: request.status,
         profilePhoto: request.user?.profilePhoto || null,
@@ -556,14 +555,15 @@ const showHostedProjectRequests = async (req, res) => {
       })),
     }));
 
-    return res.status(200).json({ msg: "Hosted project requests retrieved successfully", data: projectRequests });
+    return res.status(200).json({
+      msg: "Hosted project requests retrieved successfully",
+      data: projectRequests,
+    });
   } catch (error) {
     console.error("Error fetching hosted project requests:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-
 
 const getUserCurrWorkingProject = async (req, res) => {
   try {
@@ -603,5 +603,35 @@ const getUserCurrWorkingProject = async (req, res) => {
   }
 };
 
+const getAllProjects = async (req, res) => {
+  try {
+    const allProjects = await prisma.project.findMany();
 
-export { createProject, addMentor, sendRequest, requestResult, updateProject,showPrequestForParticularProject,showHostedProjectRequests,getUserCurrWorkingProject };
+    if (!allProjects || allProjects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No Project Found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "All Data of Project fetched successfully",
+      projects: allProjects,
+    });
+  } catch (err) {
+    console.log("Error Fetching all Project from the DB: ", err);
+    return res.status(500).json({ message: "Internal Server error" });
+  }
+};
+
+export {
+  createProject,
+  addMentor,
+  sendRequest,
+  requestResult,
+  updateProject,
+  showPrequestForParticularProject,
+  showHostedProjectRequests,
+  getUserCurrWorkingProject,
+  getAllProjects,
+};
