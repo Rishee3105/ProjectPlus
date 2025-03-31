@@ -194,7 +194,7 @@ const sendRequest = async (req, res) => {
       to: projectOwnerEmail,
       subject: "Project Join Request",
       html: `
-            <p>Hi ${project.phost},</p>
+            <p>Hi ${project.phost}(Project Host),</p>
 
             <p><strong>${user.firstName} ${user.lastName}</strong> (<a href="mailto:${user.email}">${user.email}</a>) is interested in joining your project, <strong>${project.pname}</strong>.</p>
 
@@ -203,7 +203,7 @@ const sendRequest = async (req, res) => {
             <p>Feel free to reach out to them directly if you need more details.</p>
 
             <p>Best regards,</p>
-            <p>Project Management Team</p>
+            <p>ProjectPlus Team</p>
       `,
     });
 
@@ -287,18 +287,18 @@ const requestResult = async (req, res) => {
     if (status === "APPROVED") {
       emailSubject = "Your Project Request was Approved 🎉";
       emailHtml = `
-        <p>Hi ${request.user.firstName},</p>
-        <p>Your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:green;">approved</strong> by the host.</p>
+        <p>Hi ${request.user.charusatId}(${request.user.firstName} ${request.user.lastName}),</p>
+        <p>Your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:green;">approved</strong> by the ${request.project.phost}(Project Host).</p>
         <p>The project has been added to your working projects list. Welcome to the team! 🚀</p>
-        <p>Best regards,<br>Project Management Team</p>
+        <p>Best regards,<br>ProjectPlus Team</p>
       `;
     } else {
       emailSubject = "Your Project Request was Rejected ❌";
       emailHtml = `
-        <p>Hi ${request.user.firstName},</p>
-        <p>Unfortunately, your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:red;">rejected</strong> by the host.</p>
+        <p>Hi ${request.user.charusatId}(${request.user.firstName} ${request.user.lastName}),</p>
+        <p>Unfortunately, your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:red;">rejected</strong> by the ${request.project.phost}(Project Host)./p>
         <p>We encourage you to explore other projects that match your skills.</p>
-        <p>Best regards,<br>Project Management Team</p>
+        <p>Best regards,<br>ProjectPlus Team</p>
       `;
     }
 

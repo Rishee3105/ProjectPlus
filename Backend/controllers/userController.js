@@ -47,7 +47,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
         </div>
         <p style="font-size: 14px; color: #666; margin-top: 20px;">This code will expire in 1 hour. Do not share this code with anyone.</p>
         <p style="font-size: 14px; color: #666;">If you did not request this, please ignore this email.</p>
-        <p style="font-size: 14px; color: #666;">Best Regards,<br>Project Plus Team</p>
+        <p style="font-size: 14px; color: #666;">Best Regards,<br>ProjectPlus Team</p>
       </div>
     `,
   };
@@ -114,6 +114,8 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const verificationCode = generateRandomVerificationCode();
+    console.log(verificationCode);
+    
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.user.create({
@@ -263,13 +265,13 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "bakenest9@gmail.com",
-        pass: "aghm pbse asnm gbwv",
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
       },
     });
 
     const mailOptions = {
-      from: "bakenest9@gmail.com",
+      from: process.env.EMAIL,
       to: email,
       subject: "Reset Your Password - Action Required",
       html: `
@@ -360,10 +362,34 @@ const verifyCodeAndResetPassword = async (req, res) => {
   }
 };
 
+
+const userProfileDetails = async (req, res) => {
+  try {
+    const charusatId = req.query.charusatId; 
+    if (!charusatId) {
+      return res.status(400).json({ message: "charusatId is required" });
+    }
+
+    const userData = await prisma.user.findUnique({
+      where: { charusatId },
+    });
+
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json(userData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export {
   registerUser,
   verifyUser,
   signinUser,
   forgotPassword,
   verifyCodeAndResetPassword,
+  userProfileDetails
 };
