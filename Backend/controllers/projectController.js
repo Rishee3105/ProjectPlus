@@ -196,7 +196,7 @@ const sendRequest = async (req, res) => {
       to: projectOwnerEmail,
       subject: "Project Join Request",
       html: `
-            <p>Hi ${project.phost},</p>
+            <p>Hi ${project.phost}(Project Host),</p>
 
             <p><strong>${user.firstName} ${user.lastName}</strong> (<a href="mailto:${user.email}">${user.email}</a>) is interested in joining your project, <strong>${project.pname}</strong>.</p>
 
@@ -205,7 +205,7 @@ const sendRequest = async (req, res) => {
             <p>Feel free to reach out to them directly if you need more details.</p>
 
             <p>Best regards,</p>
-            <p>Project Management Team</p>
+            <p>ProjectPlus Team</p>
       `,
     });
 
@@ -607,7 +607,22 @@ const getUserCurrWorkingProject = async (req, res) => {
 
 const getAllProjects = async (req, res) => {
   try {
-    const allProjects = await prisma.project.findMany();
+    const allProjects = await prisma.project.findMany({
+      select: {
+        id: true,
+        pname: true,
+        pdescription: true,
+        pdefinition: true,
+        phost: true,
+        teamSize: true,
+        members: true,
+        mentors: true,
+        pduration: true,
+        requiredDomain: true,
+        techStack: true,
+        projectPrivacy: true,
+      },
+    });
 
     if (!allProjects || allProjects.length === 0) {
       return res.status(404).json({
@@ -615,6 +630,7 @@ const getAllProjects = async (req, res) => {
         message: "No Project Found",
       });
     }
+
     res.status(200).json({
       success: true,
       message: "All Data of Project fetched successfully",
@@ -622,7 +638,63 @@ const getAllProjects = async (req, res) => {
     });
   } catch (err) {
     console.log("Error Fetching all Project from the DB: ", err);
-    return res.status(500).json({ message: "Internal Server error" });
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const getParticularProjectDetails = async (req, res) => {
+  try {
+    const projectId = parseInt(req.query.projectId, 10);
+
+    if (!projectId) {
+      return res.status(400).json({
+        message: "Project ID is required and must be a valid number.",
+      });
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        members: {
+          select: {
+            charusatId: true,
+            role: true,
+          },
+        },
+        mentors: {
+          select: {
+            name: true,
+          },
+        },
+        suggestions: true,
+      },
+    });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
+    }
+
+    // Fetch user details for each member
+    const memberIds = project.members.map((member) => member.charusatId);
+    const users = await prisma.user.findMany({
+      where: { charusatId: { in: memberIds } },
+      select: { charusatId: true, firstName: true, lastName: true },
+    });
+
+    // Map members to include name
+    const formattedMembers = project.members.map((member) => {
+      const user = users.find((u) => u.charusatId === member.charusatId);
+      return {
+        charusatId: member.charusatId,
+        role: member.role,
+        name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+      };
+    });
+
+    return res.status(200).json({ ...project, members: formattedMembers });
+  } catch (error) {
+    console.error("Error fetching project details:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -636,4 +708,5 @@ export {
   showHostedProjectRequests,
   getUserCurrWorkingProject,
   getAllProjects,
+  getParticularProjectDetails,
 };

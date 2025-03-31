@@ -9,6 +9,7 @@ import {
   showHostedProjectRequests,
   getUserCurrWorkingProject,
   getAllProjects,
+  getParticularProjectDetails,
 } from "../controllers/projectController.js";
 import authMiddleware from "../middleware/auth.js";
 import { uploadProjectDocumentation } from "../middleware/fileUploadMiddleware.js";
@@ -46,5 +47,10 @@ projectRoute.get(
   getUserCurrWorkingProject
 );
 projectRoute.get("/getAllProjects", authMiddleware, getAllProjects);
+projectRoute.get(
+  "/getParticularProjectDetails",
+  authMiddleware,
+  getParticularProjectDetails
+);
 
 export default projectRoute;
