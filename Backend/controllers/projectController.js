@@ -249,22 +249,33 @@ const requestResult = async (req, res) => {
     }
 
     if (status === "APPROVED") {
-      await prisma.member.create({
-        data: {
-          charusatId: request.user.charusatId,
-          role: "STUDENT",
-          projectId: request.project.id,
-        },
-      });
-
-      await prisma.user.update({
-        where: { id: request.userId },
-        data: {
-          currWorkingProjects: {
-            push: request.projectId.toString(),
+      const existingMember = await prisma.member.findUnique({
+        where: {
+          charusatId_projectId: {
+            charusatId: request.user.charusatId,
+            projectId: request.project.id,
           },
         },
       });
+
+      if (!existingMember) {
+        await prisma.member.create({
+          data: {
+            charusatId: request.user.charusatId,
+            role: "STUDENT",
+            projectId: request.project.id,
+          },
+        });
+
+        await prisma.user.update({
+          where: { id: request.userId },
+          data: {
+            currWorkingProjects: {
+              push: request.projectId.toString(),
+            },
+          },
+        });
+      }
     }
 
     await prisma.prequest.update({
@@ -298,7 +309,7 @@ const requestResult = async (req, res) => {
       emailSubject = "Your Project Request was Rejected ❌";
       emailHtml = `
         <p>Hi ${request.user.charusatId}(${request.user.firstName} ${request.user.lastName}),</p>
-        <p>Unfortunately, your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:red;">rejected</strong> by the ${request.project.phost}(Project Host)./p>
+        <p>Unfortunately, your request to join the project <strong>${request.project.pname}</strong> has been <strong style="color:red;">rejected</strong> by the ${request.project.phost}(Project Host).</p>
         <p>We encourage you to explore other projects that match your skills.</p>
         <p>Best regards,<br>ProjectPlus Team</p>
       `;
@@ -523,6 +534,7 @@ const showHostedProjectRequests = async (req, res) => {
         pname: true,
         prequest: {
           select: {
+            id:true,
             userId: true,
             status: true,
             user: {
@@ -548,6 +560,7 @@ const showHostedProjectRequests = async (req, res) => {
       projectId: project.id,
       projectName: project.pname,
       requests: project.prequest.map((request) => ({
+        requestId:request.id,
         userId: request.userId,
         status: request.status,
         profilePhoto: request.user?.profilePhoto || null,
@@ -626,6 +639,62 @@ const getAllProjects = async (req, res) => {
   }
 };
 
+
+const getParticularProjectDetails = async (req, res) => {
+  try {
+    const projectId = parseInt(req.query.projectId, 10);
+
+    if (!projectId) {
+      return res.status(400).json({ message: "Project ID is required and must be a valid number." });
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        members: {
+          select: {
+            charusatId: true,
+            role: true,
+          },
+        },
+        mentors: {
+          select: {
+            name: true,
+          },
+        },
+        suggestions: true,
+      },
+    });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
+    }
+
+    // Fetch user details for each member
+    const memberIds = project.members.map((member) => member.charusatId);
+    const users = await prisma.user.findMany({
+      where: { charusatId: { in: memberIds } },
+      select: { charusatId: true, firstName: true, lastName: true },
+    });
+
+    // Map members to include name
+    const formattedMembers = project.members.map((member) => {
+      const user = users.find((u) => u.charusatId === member.charusatId);
+      return {
+        charusatId: member.charusatId,
+        role: member.role,
+        name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+      };
+    });
+
+    return res.status(200).json({ ...project, members: formattedMembers });
+  } catch (error) {
+    console.error("Error fetching project details:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 export {
   createProject,
   addMentor,
@@ -636,4 +705,5 @@ export {
   showHostedProjectRequests,
   getUserCurrWorkingProject,
   getAllProjects,
+  getParticularProjectDetails
 };
