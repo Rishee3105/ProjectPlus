@@ -10,7 +10,6 @@ import {
   getUserCurrWorkingProject,
   getAllProjects,
   getParticularProjectDetails,
-  getParticularProjectDetails,
 } from "../controllers/projectController.js";
 import authMiddleware from "../middleware/auth.js";
 import { uploadProjectDocumentation } from "../middleware/fileUploadMiddleware.js";

@@ -4,6 +4,133 @@ import path from "path";
 import fs from "fs";
 const prisma = new PrismaClient();
 
+// const createProject = async (req, res) => {
+//   try {
+//     if (!req.userId) {
+//       return res.status(401).json({ message: "Unauthorized - No User ID" });
+//     }
+
+//     const userData = await prisma.user.findUnique({
+//       where: { id: req.userId },
+//       select: {
+//         charusatId: true,
+//         role: true,
+//         id: true,
+//         department: true,
+//         institute: true,
+//       },
+//     });
+
+//     if (!userData) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     console.log(req.body);
+
+//     const {
+//       pname,
+//       pdescription,
+//       pdefinition,
+//       teamSize,
+//       pduration,
+//       projectPrivacy,
+//       techStack,
+//       requiredDomain,
+//     } = req.body;
+
+//     const { charusatId, department, institute } = userData;
+//     if (!department) {
+//       return res.status(400).json({ message: "User department not found" });
+//     }
+
+//     // Define storage path
+//     const projectFolder = path.join(
+//       "uploads/projectDocumentation",
+//       institute,
+//       department,
+//       `${charusatId}_${pname}`
+//     );
+
+//     // Ensure the folder exists
+//     if (!fs.existsSync(projectFolder)) {
+//       fs.mkdirSync(projectFolder, { recursive: true });
+//     }
+
+//     const newFilenames = [];
+
+//     if (req.files && req.files.length > 0) {
+//       for (const file of req.files) {
+//         const newPath = path.join(projectFolder, file.originalname);
+//         fs.renameSync(file.path, newPath);
+//         newFilenames.push(newPath);
+//       }
+//     }
+
+//     const formattedFilenames = newFilenames.map((filePath) =>
+//       filePath.replace(/\\/g, "/")
+//     );
+
+//     const newProject = await prisma.project.create({
+//       data: {
+//         pname,
+//         pdescription,
+//         pdefinition,
+//         phost: charusatId,
+//         teamSize: Number(teamSize),
+//         pduration: Number(pduration),
+//         projectPrivacy,
+//         // Only include non-empty strings in arrays!
+//         requiredDomain: Array.isArray(requiredDomain)
+//           ? requiredDomain
+//               .flat()
+//               .filter((x) => typeof x === "string" && x.trim() !== "")
+//           : typeof requiredDomain === "string"
+//           ? [requiredDomain]
+//           : [],
+//         techStack: Array.isArray(techStack)
+//           ? techStack
+//               .flat()
+//               .filter((x) => typeof x === "string" && x.trim() !== "")
+//           : typeof techStack === "string"
+//           ? [techStack]
+//           : [],
+//         documentation: formattedFilenames,
+//         members: {
+//           create: {
+//             charusatId,
+//             role: userData.role,
+//           },
+//         },
+//       },
+//     });
+
+//     await prisma.user.update({
+//       where: { id: userData.id },
+//       data: {
+//         currWorkingProjects: {
+//           push: newProject.id.toString(),
+//         },
+//       },
+//     });
+
+//     return res
+//       .status(200)
+//       .json({ message: "Project created successfully", project: newProject });
+//   } catch (error) {
+//     console.error("Error creating project:", error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+
+
+
+function arrayify(val) {
+  if (Array.isArray(val)) return val.filter(x => x && x.trim());
+  if (typeof val === "string" && val.trim() !== "") return [val];
+  return [];
+}
+
 const createProject = async (req, res) => {
   try {
     if (!req.userId) {
@@ -24,8 +151,6 @@ const createProject = async (req, res) => {
     if (!userData) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    console.log(req.body);
 
     const {
       pname,
@@ -51,7 +176,6 @@ const createProject = async (req, res) => {
       `${charusatId}_${pname}`
     );
 
-    // Ensure the folder exists
     if (!fs.existsSync(projectFolder)) {
       fs.mkdirSync(projectFolder, { recursive: true });
     }
@@ -62,13 +186,17 @@ const createProject = async (req, res) => {
       for (const file of req.files) {
         const newPath = path.join(projectFolder, file.originalname);
         fs.renameSync(file.path, newPath);
-        newFilenames.push(newPath);
+        newFilenames.push(newPath.replace(/\\/g, "/"));
       }
     }
 
-    const formattedFilenames = newFilenames.map((filePath) =>
-      filePath.replace(/\\/g, "/")
-    );
+    // --- The important part: Always arrays for Prisma String[] ---
+    const requiredDomainArr = arrayify(requiredDomain);
+    const techStackArr = arrayify(techStack);
+
+    // Optionally log for debugging
+    // console.log("requiredDomainArr:", requiredDomainArr, typeof requiredDomainArr, Array.isArray(requiredDomainArr));
+    // console.log("techStackArr:", techStackArr, typeof techStackArr, Array.isArray(techStackArr));
 
     const newProject = await prisma.project.create({
       data: {
@@ -79,9 +207,9 @@ const createProject = async (req, res) => {
         teamSize: Number(teamSize),
         pduration: Number(pduration),
         projectPrivacy,
-        requiredDomain,
-        techStack,
-        documentation: formattedFilenames,
+        requiredDomain: requiredDomainArr,
+        techStack: techStackArr,
+        documentation: newFilenames,
         members: {
           create: {
             charusatId,
@@ -108,6 +236,8 @@ const createProject = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
 
 const addMentor = async (req, res) => {
   try {
@@ -535,7 +665,7 @@ const showHostedProjectRequests = async (req, res) => {
         pname: true,
         prequest: {
           select: {
-            id:true,
+            id: true,
             userId: true,
             status: true,
             user: {
@@ -561,7 +691,7 @@ const showHostedProjectRequests = async (req, res) => {
       projectId: project.id,
       projectName: project.pname,
       requests: project.prequest.map((request) => ({
-        requestId:request.id,
+        requestId: request.id,
         userId: request.userId,
         status: request.status,
         profilePhoto: request.user?.profilePhoto || null,
@@ -619,9 +749,96 @@ const getUserCurrWorkingProject = async (req, res) => {
   }
 };
 
+// const getAllProjects = async (req, res) => {
+//   try {
+//     const allProjects = await prisma.project.findMany({
+//       select: {
+//         id: true,
+//         pname: true,
+//         pdescription: true,
+//         pdefinition: true,
+//         phost: true,
+//         teamSize: true,
+//         members: true,
+//         mentors: true,
+//         pduration: true,
+//         requiredDomain: true,
+//         techStack: true,
+//         projectPrivacy: true,
+//       },
+//     });
+
+//     if (!allProjects || allProjects.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No Project Found",
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "All Data of Project fetched successfully",
+//       projects: allProjects,
+//     });
+//   } catch (err) {
+//     console.log("Error Fetching all Project from the DB: ", err);
+//     return res.status(500).json({ message: "Internal Server error" });
+//   }
+// };
+
 const getAllProjects = async (req, res) => {
   try {
-    const allProjects = await prisma.project.findMany({
+    const { hostRole, domains, minTeamSize, maxTeamSize, privacy, search } =
+      req.query;
+
+    // Prepare filter object
+    let where = {};
+
+    // Host Role Filter
+    if (hostRole) {
+      const users = await prisma.user.findMany({
+        where: { role: hostRole },
+        select: { charusatId: true },
+      });
+      const charusatIds = users.map((u) => u.charusatId);
+      if (charusatIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: "No projects found (no users with given role)",
+          projects: [],
+        });
+      }
+      where.phost = { in: charusatIds };
+    }
+
+    // Domain filter
+    if (domains) {
+      where.requiredDomain = { hasSome: domains.split(",") };
+    }
+
+    // Team size filter
+    if (minTeamSize || maxTeamSize) {
+      where.teamSize = {};
+      if (minTeamSize) where.teamSize.gte = parseInt(minTeamSize);
+      if (maxTeamSize) where.teamSize.lte = parseInt(maxTeamSize);
+    }
+
+    // Privacy filter
+    if (privacy && privacy !== "all") {
+      where.projectPrivacy = privacy;
+    }
+
+    // Search filter
+    if (search) {
+      where.OR = [
+        { pname: { contains: search, mode: "insensitive" } },
+        { pdescription: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    // Prisma query
+    const projects = await prisma.project.findMany({
+      where,
       select: {
         id: true,
         pname: true,
@@ -635,34 +852,36 @@ const getAllProjects = async (req, res) => {
         requiredDomain: true,
         techStack: true,
         projectPrivacy: true,
+        upvotes: true,
       },
+      orderBy: { id: "desc" },
     });
 
-    if (!allProjects || allProjects.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No Project Found",
-      });
-    }
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "All Data of Project fetched successfully",
-      projects: allProjects,
+      message: "Projects fetched successfully",
+      projects,
     });
   } catch (err) {
-    console.log("Error Fetching all Project from the DB: ", err);
-    return res.status(500).json({ message: "Internal Server error" });
+    console.error("Error Fetching all Project from the DB:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server error",
+      error: err.message,
+    });
   }
 };
-
 
 const getParticularProjectDetails = async (req, res) => {
   try {
     const projectId = parseInt(req.query.projectId, 10);
 
     if (!projectId) {
-      return res.status(400).json({ message: "Project ID is required and must be a valid number." });
+      return res
+        .status(400)
+        .json({
+          message: "Project ID is required and must be a valid number.",
+        });
     }
 
     const project = await prisma.project.findUnique({
@@ -711,7 +930,6 @@ const getParticularProjectDetails = async (req, res) => {
   }
 };
 
-
 export {
   createProject,
   addMentor,
@@ -722,5 +940,5 @@ export {
   showHostedProjectRequests,
   getUserCurrWorkingProject,
   getAllProjects,
-  getParticularProjectDetails
+  getParticularProjectDetails,
 };
