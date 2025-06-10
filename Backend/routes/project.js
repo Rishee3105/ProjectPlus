@@ -10,6 +10,8 @@ import {
   getUserCurrWorkingProject,
   getAllProjects,
   getParticularProjectDetails,
+  getParticularUserRequestStatus,
+  getParticularProjectRequests,
 } from "../controllers/projectController.js";
 import authMiddleware from "../middleware/auth.js";
 import { uploadProjectDocumentation } from "../middleware/fileUploadMiddleware.js";
@@ -52,6 +54,17 @@ projectRoute.get(
   "/getParticularProjectDetails",
   authMiddleware,
   getParticularProjectDetails
+);
+
+projectRoute.get(
+  "/getParticularUserRequestStatus",
+  authMiddleware,
+  getParticularUserRequestStatus
+);
+projectRoute.get(
+  "/getParticularProjectRequests",
+  authMiddleware,
+  getParticularProjectRequests
 );
 
 export default projectRoute;

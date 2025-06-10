@@ -124,8 +124,14 @@ model Project {
   suggestions    Suggestion[] // Linked suggestions with time tracking
   projectPrivacy ProjectPrivacy
   upvotes        Int            @default(0)
+  status         ProjectStatus? @default(Active)
 
   @@index([pname, phost]) // Optimized for search by project name and host
+}
+
+enum ProjectStatus {
+  Active
+  Completed
 }
 
 enum RequestStatus {
@@ -137,11 +143,12 @@ enum RequestStatus {
 model prequest {
   id        Int           @id @default(autoincrement())
   status    RequestStatus
-  userId    Int // ID of the user who made the request
+  userId    Int           // ID of the user who made the request
   projectId Int
   project   Project       @relation(fields: [projectId], references: [id])
   user      User          @relation(fields: [userId], references: [id])
 
+  @@unique([userId, projectId])  // Added unique constraint
   @@index([userId, projectId])
 }
 
