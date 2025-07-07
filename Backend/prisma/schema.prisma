@@ -52,6 +52,7 @@ model User {
   socialLinks         String[] // Array of social media links
 
   prequests        prequest[] // Relation to prequest
+  members          Member[]
   verificationCode String?
   expiresAt        DateTime?
 
@@ -154,10 +155,12 @@ model prequest {
 
 model Member {
   id         Int     @id @default(autoincrement())
-  charusatId String
+  charusatId String?
+  userId     Int
   role       String // Role in the project
   projectId  Int
   project    Project @relation(fields: [projectId], references: [id])
+  user       User    @relation(fields: [userId],references: [id])
 
   @@unique([charusatId, projectId]) // Ensure user can only join a project once
   @@index([charusatId]) // Optimized for checking availability of members
